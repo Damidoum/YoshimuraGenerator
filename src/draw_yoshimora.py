@@ -1,6 +1,7 @@
 from typing import Any
 from dxfwrite import DXFEngine as dxf
 from utils import end_point_of_line
+import math
 
 
 class Branch:
@@ -143,9 +144,18 @@ class BuildingBlockYoshimora:
         branch_positions = self.compute_branch_position()
         for i, branch_state in enumerate(self.activated_branch):
             if branch_state:
+                # adapt the length of the branch for the tesselation
+                if i == 0 or i == 3:
+                    length = (
+                        2
+                        * math.cos(math.radians(self.angle))
+                        * (self.length + 2 * self.radius)
+                    ) - 2 * self.radius
+                else:
+                    length = self.length
                 branch = Branch(
                     start_point=branch_positions[i],
-                    length=self.length,
+                    length=length,
                     angle=angles[i],
                     count_beam=self.count_beam,
                     pannel_gap=self.pannel_gap,
@@ -158,6 +168,84 @@ class BuildingBlockYoshimora:
 
     def __call__(self) -> None:
         self.draw_building_block()
+
+
+class YoshimoraTesselation:
+    def __init__(
+        self,
+        size: tuple[int],
+        center: tuple[float],
+        radius: float,
+        length: float,
+        angle: float,
+        count_beam: int,
+        pannel_gap=1.2,
+        beam_gap=2.33,
+        beam_length=6.33,
+        beam_width=4.83,
+        drawing=dxf.drawing("yoshimura_pattern.dxf"),
+    ) -> None:
+        self.size = size
+        self.center = center
+        self.radius = radius
+        self.length = length
+        self.angle = angle
+        self.count_beam = count_beam
+        self.pannel_gap = pannel_gap
+        self.beam_gap = beam_gap
+        self.beam_length = beam_length
+        self.beam_width = beam_width
+        self.drawing = drawing
+
+    def compute_activated_branch(self, pos: tuple[int]) -> list[bool]:
+        activated_branch = [True for _ in range(6)]
+        if pos[0] > 0:
+            activated_branch[3] = False
+        if pos[1] > 0:
+            activated_branch[2] = False
+            if pos[0] < self.size[0] - 1:
+                activated_branch[1] = False
+        return activated_branch
+
+    def compute_branch_position(self, pos: tuple[int]) -> tuple[float]:
+        vertical_mov = end_point_of_line(
+            self.center, pos[1] * (2 * self.radius + self.length), -self.angle
+        )
+        horizontal_mov = end_point_of_line(
+            self.center,
+            pos[0]
+            * 2
+            * math.cos(math.radians(self.angle))
+            * (self.length + 2 * self.radius),
+            0,
+        )
+
+        return horizontal_mov[0] + vertical_mov[0], vertical_mov[1]
+
+    def draw_tesselation(self) -> None:
+        assert type(self.size) == tuple, "Size must be a tuple"
+        assert len(self.size) == 2, "Size must be a tuple of length 2"
+        for i in range(self.size[0]):
+            for j in range(self.size[1]):
+                center = self.compute_branch_position((i, j))
+                activated_branch = self.compute_activated_branch((i, j))
+                yoshimora_block = BuildingBlockYoshimora(
+                    center=center,
+                    radius=self.radius,
+                    length=self.length,
+                    angle=self.angle,
+                    count_beam=self.count_beam,
+                    activated_branch=activated_branch,
+                    pannel_gap=self.pannel_gap,
+                    beam_gap=self.beam_gap,
+                    beam_length=self.beam_length,
+                    beam_width=self.beam_width,
+                    drawing=self.drawing,
+                )
+                yoshimora_block()
+
+    def __call__(self):
+        self.draw_tesselation()
 
 
 if __name__ == "__main__":
@@ -176,12 +264,12 @@ if __name__ == "__main__":
         (0, 0), 2, 25, 45, 2, drawing=dxf.drawing("test/yoshimura_pattern.dxf")
     )
     yoshimora2 = BuildingBlockYoshimora(
-        (50, 0),
+        (0, 0),
         2,
         25,
         60,
         2,
-        [True, False, True, False, True, False],
+        [True, True, True, True, True, False],
         drawing=yoshimora1.drawing,
     )
     yoshimora3 = BuildingBlockYoshimora(
@@ -203,7 +291,19 @@ if __name__ == "__main__":
         [True, True, True, True, True, True],
         drawing=yoshimora1.drawing,
     )
-    yoshimora1()
+    # yoshimora1()
     yoshimora2()
-    yoshimora3()
-    yoshimora4()
+    # yoshimora3()
+    # yoshimora4()
+
+    tesselation = YoshimoraTesselation(
+        center=(0, 0),
+        size=(3, 3),
+        radius=2,
+        length=25,
+        angle=45,
+        count_beam=2,
+        pannel_gap=1.2,
+        drawing=dxf.drawing("test/yoshimura_tesselation.dxf"),
+    )
+    tesselation()
