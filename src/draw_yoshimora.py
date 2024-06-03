@@ -208,6 +208,13 @@ class YoshimoraTesselation:
         return activated_branch
 
     def compute_branch_position(self, pos: tuple[int]) -> tuple[float]:
+        if pos[1] % 2 == 0:
+            offset = end_point_of_line(
+                (0, 0), 2 * self.radius + self.length, self.angle
+            )[0]
+        else:
+            offset = 0
+
         vertical_mov = end_point_of_line(
             self.center, pos[1] * (2 * self.radius + self.length), -self.angle
         )
@@ -220,7 +227,7 @@ class YoshimoraTesselation:
             0,
         )
 
-        return horizontal_mov[0] + vertical_mov[0], vertical_mov[1]
+        return horizontal_mov[0] + offset, vertical_mov[1]
 
     def draw_tesselation(self) -> None:
         assert type(self.size) == tuple, "Size must be a tuple"
