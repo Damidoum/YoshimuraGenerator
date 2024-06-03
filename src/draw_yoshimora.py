@@ -298,10 +298,10 @@ if __name__ == "__main__":
 
     tesselation = YoshimoraTesselation(
         center=(0, 0),
-        size=(3, 3),
+        size=(5, 5),
         radius=2,
         length=25,
-        angle=45,
+        angle=60,
         count_beam=2,
         pannel_gap=1.2,
         drawing=dxf.drawing("test/yoshimura_tesselation.dxf"),
