@@ -1,6 +1,6 @@
 from typing import Any
 from dxfwrite import DXFEngine as dxf
-from utils import end_point_of_line
+from utils import end_point_of_line, normalize_vector, vector_difference, vector_sum
 import math
 
 
@@ -165,6 +165,29 @@ class BuildingBlockYoshimora:
                     drawing=self.drawing,
                 )
                 branch()
+            # draw extremity of the branch
+            strat_point_extremity1 = end_point_of_line(
+                branch_positions[i], self.pannel_gap / 2, angles[i] - 90
+            )
+            dir_vector1 = normalize_vector(
+                vector_difference(self.center, strat_point_extremity1)
+            )
+            second_point_extremity1 = vector_sum(
+                strat_point_extremity1, dir_vector1 * self.radius
+            )
+            self.drawing.add(dxf.line(strat_point_extremity1, second_point_extremity1))
+
+            strat_point_extremity2 = end_point_of_line(
+                branch_positions[i], self.pannel_gap / 2, angles[i] + 90
+            )
+            dir_vector2 = normalize_vector(
+                vector_difference(self.center, strat_point_extremity2)
+            )
+            second_point_extremity2 = vector_sum(
+                strat_point_extremity2, dir_vector2 * self.radius
+            )
+            self.drawing.add(dxf.line(strat_point_extremity2, second_point_extremity2))
+            self.drawing.add(dxf.line(second_point_extremity1, second_point_extremity2))
 
     def __call__(self) -> None:
         self.draw_building_block()
