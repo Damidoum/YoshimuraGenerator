@@ -171,6 +171,7 @@ class BuildingBlockYoshimora:
         beam_length=6.33,
         beam_width=4.83,
         drawing=dxf.drawing("yoshimura_pattern.dxf"),
+        tape=False,
     ) -> None:
         self.center = center
         self.radius = radius
@@ -183,6 +184,7 @@ class BuildingBlockYoshimora:
         self.beam_length = beam_length
         self.beam_width = beam_width
         self.drawing = drawing
+        self.tape = tape
 
     def compute_branch_position(self) -> list[tuple[float]]:
         branch_positions = []
@@ -205,41 +207,61 @@ class BuildingBlockYoshimora:
                     ) - 2 * self.radius
                 else:
                     length = self.length
-                branch = Branch(
-                    start_point=branch_positions[i],
-                    length=length,
-                    angle=angles[i],
-                    count_beam=self.count_beam,
-                    pannel_gap=self.pannel_gap,
-                    beam_gap=self.beam_gap,
-                    beam_length=self.beam_length,
-                    beam_width=self.beam_width,
-                    drawing=self.drawing,
-                )
+                if not self.tape:
+                    branch = Branch(
+                        start_point=branch_positions[i],
+                        length=length,
+                        angle=angles[i],
+                        count_beam=self.count_beam,
+                        pannel_gap=self.pannel_gap,
+                        beam_gap=self.beam_gap,
+                        beam_length=self.beam_length,
+                        beam_width=self.beam_width,
+                        drawing=self.drawing,
+                    )
+                else:
+                    branch = BranchTape(
+                        start_point=branch_positions[i],
+                        length=length,
+                        angle=angles[i],
+                        count_beam=self.count_beam,
+                        pannel_gap=self.pannel_gap,
+                        beam_gap=self.beam_gap,
+                        beam_length=self.beam_length,
+                        beam_width=self.beam_width,
+                        drawing=self.drawing,
+                    )
                 branch()
             # draw extremity of the branch
-            strat_point_extremity1 = end_point_of_line(
-                branch_positions[i], self.pannel_gap / 2, angles[i] - 90
-            )
-            dir_vector1 = normalize_vector(
-                vector_difference(self.center, strat_point_extremity1)
-            )
-            second_point_extremity1 = vector_sum(
-                strat_point_extremity1, dir_vector1 * self.radius
-            )
-            self.drawing.add(dxf.line(strat_point_extremity1, second_point_extremity1))
+            if not self.tape:
+                strat_point_extremity1 = end_point_of_line(
+                    branch_positions[i], self.pannel_gap / 2, angles[i] - 90
+                )
+                dir_vector1 = normalize_vector(
+                    vector_difference(self.center, strat_point_extremity1)
+                )
+                second_point_extremity1 = vector_sum(
+                    strat_point_extremity1, dir_vector1 * self.radius
+                )
+                self.drawing.add(
+                    dxf.line(strat_point_extremity1, second_point_extremity1)
+                )
 
-            strat_point_extremity2 = end_point_of_line(
-                branch_positions[i], self.pannel_gap / 2, angles[i] + 90
-            )
-            dir_vector2 = normalize_vector(
-                vector_difference(self.center, strat_point_extremity2)
-            )
-            second_point_extremity2 = vector_sum(
-                strat_point_extremity2, dir_vector2 * self.radius
-            )
-            self.drawing.add(dxf.line(strat_point_extremity2, second_point_extremity2))
-            self.drawing.add(dxf.line(second_point_extremity1, second_point_extremity2))
+                strat_point_extremity2 = end_point_of_line(
+                    branch_positions[i], self.pannel_gap / 2, angles[i] + 90
+                )
+                dir_vector2 = normalize_vector(
+                    vector_difference(self.center, strat_point_extremity2)
+                )
+                second_point_extremity2 = vector_sum(
+                    strat_point_extremity2, dir_vector2 * self.radius
+                )
+                self.drawing.add(
+                    dxf.line(strat_point_extremity2, second_point_extremity2)
+                )
+                self.drawing.add(
+                    dxf.line(second_point_extremity1, second_point_extremity2)
+                )
 
     def __call__(self) -> None:
         self.draw_building_block()
@@ -259,6 +281,7 @@ class YoshimoraTesselation:
         beam_length=6.33,
         beam_width=4.83,
         drawing=dxf.drawing("yoshimura_pattern.dxf"),
+        tape=False,
     ) -> None:
         self.size = size
         self.center = center
@@ -271,6 +294,7 @@ class YoshimoraTesselation:
         self.beam_length = beam_length
         self.beam_width = beam_width
         self.drawing = drawing
+        self.tape = tape
 
     def compute_activated_branch(self, pos: tuple[int]) -> list[bool]:
         activated_branch = [True for _ in range(6)]
@@ -323,6 +347,7 @@ class YoshimoraTesselation:
                     beam_length=self.beam_length,
                     beam_width=self.beam_width,
                     drawing=self.drawing,
+                    tape=self.tape,
                 )
                 yoshimora_block()
 
@@ -331,39 +356,27 @@ class YoshimoraTesselation:
 
 
 if __name__ == "__main__":
-    branch1 = BranchTape(
-        start_point=(5, 0),
-        length=60,
-        angle=30,
-        count_beam=4,
-        pannel_gap=1.5,
-        beam_gap=5,
-        beam_length=3,
-        beam_width=5,
-        drawing=dxf.drawing("test/yoshimora_branch.dxf"),
-    )
-    branch1()
-    branch2 = Branch(
-        start_point=(5, 0),
-        length=60,
-        angle=30,
-        count_beam=4,
+    tesselation = YoshimoraTesselation(
+        center=(0, 0),
+        size=(5, 5),
+        radius=2,
+        length=25,
+        angle=60,
+        count_beam=2,
         pannel_gap=1.2,
-        beam_gap=5,
-        beam_length=3,
-        beam_width=5,
-        drawing=dxf.drawing("test/yoshimora_branch.dxf"),
+        drawing=dxf.drawing("test/yoshimura_tesselation.dxf"),
     )
-    branch2()
+    tesselation()
 
-    # tesselation = YoshimoraTesselation(
-    #     center=(0, 0),
-    #     size=(5, 5),
-    #     radius=2,
-    #     length=25,
-    #     angle=60,
-    #     count_beam=2,
-    #     pannel_gap=1.2,
-    #     drawing=dxf.drawing("test/yoshimura_tesselation.dxf"),
-    # )
-    # tesselation()
+    tesselation_tape = YoshimoraTesselation(
+        center=(200, 0),
+        size=(5, 5),
+        radius=2,
+        length=25,
+        angle=60,
+        count_beam=2,
+        pannel_gap=1.2,
+        drawing=tesselation.drawing,
+        tape=True,
+    )
+    tesselation_tape()
