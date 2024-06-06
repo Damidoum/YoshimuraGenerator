@@ -15,7 +15,7 @@ class Branch:
         beam_gap=2.33,
         beam_length=6.33,
         beam_width=4.83,
-        drawing=dxf.drawing("yoshimura_pattern.dxf"),
+        drawing=dxf.drawing("yoshimura_branch.dxf"),
     ) -> None:
         self.start_point = start_point
         self.end_point = end_point_of_line(start_point, length, angle)
@@ -36,7 +36,7 @@ class Branch:
 
     def draw_branch(self, filename=None):
         if filename is None:
-            filename = "yoshimura_pattern.dxf"
+            filename = "yoshimura_branch.dxf"
         assert type(filename) == str, "Filename must be a string"
 
         # Draw the branchs
@@ -68,15 +68,13 @@ class Branch:
             for i in range(self.count_beam):
                 # left beam slot
                 beam_point1 = end_point_of_line(
-                    start_point_beam, (self.beam_width -
-                                       self.pannel_gap) / 2, angle
+                    start_point_beam, (self.beam_width - self.pannel_gap) / 2, angle
                 )
                 beam_point2 = end_point_of_line(
                     beam_point1, self.beam_length, self.angle
                 )
                 beam_point3 = end_point_of_line(
-                    beam_point2, (self.beam_width -
-                                  self.pannel_gap) / 2, angle + 180
+                    beam_point2, (self.beam_width - self.pannel_gap) / 2, angle + 180
                 )
                 if i < self.count_beam - 1:
                     beam_point4 = end_point_of_line(
@@ -96,8 +94,7 @@ class Branch:
                 else:
                     self.drawing.add(
                         dxf.polyline(
-                            [start_point_beam, beam_point1,
-                                beam_point2, beam_point3]
+                            [start_point_beam, beam_point1, beam_point2, beam_point3]
                         )
                     )
                 start_point_beam = beam_point4
@@ -106,6 +103,58 @@ class Branch:
 
     def __call__(self):
         return self.draw_branch()
+
+
+class BranchTape(Branch):
+    def __repr__(self) -> str:
+        return f"BranchTape(length = {self.length}, angle = {self.angle}, number of beam = {self.count_beam})"
+
+    def draw_branch(self, filename=None):
+        if filename is None:
+            filename = "yoshimura_branch.dxf"
+        assert type(filename) == str, "Filename must be a string"
+
+        # Draw the branchs
+        length_extremity_lines = (
+            self.length
+            - self.beam_length * self.count_beam
+            - self.beam_gap * (self.count_beam - 1)
+        ) / 2
+        start_point_beam = end_point_of_line(
+            self.start_point, length_extremity_lines, self.angle
+        )
+        start_point_beam = end_point_of_line(
+            start_point_beam, self.beam_width / 2, self.angle - 90
+        )
+        for i in range(self.count_beam):
+            # left beam slot
+            beam_point1 = end_point_of_line(
+                start_point_beam,
+                self.beam_width,
+                self.angle + 90,
+            )
+            beam_point2 = end_point_of_line(beam_point1, self.beam_length, self.angle)
+            beam_point3 = end_point_of_line(
+                beam_point2, self.beam_width, self.angle - 90
+            )
+            beam_point4 = end_point_of_line(
+                beam_point3, self.beam_length, self.angle + 180
+            )
+            self.drawing.add(
+                dxf.polyline(
+                    [
+                        start_point_beam,
+                        beam_point1,
+                        beam_point2,
+                        beam_point3,
+                        beam_point4,
+                    ]
+                )
+            )
+            start_point_beam = end_point_of_line(
+                start_point_beam, self.beam_length + self.beam_gap, self.angle
+            )
+        self.drawing.save()
 
 
 class BuildingBlockYoshimora:
@@ -137,16 +186,13 @@ class BuildingBlockYoshimora:
 
     def compute_branch_position(self) -> list[tuple[float]]:
         branch_positions = []
-        angles = [0, self.angle, 180 - self.angle,
-                  180, 180 + self.angle, -self.angle]
+        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
         for angle in angles:
-            branch_positions.append(end_point_of_line(
-                self.center, self.radius, angle))
+            branch_positions.append(end_point_of_line(self.center, self.radius, angle))
         return branch_positions
 
     def draw_building_block(self) -> None:
-        angles = [0, self.angle, 180 - self.angle,
-                  180, 180 + self.angle, -self.angle]
+        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
         branch_positions = self.compute_branch_position()
         for i, branch_state in enumerate(self.activated_branch):
             if branch_state:
@@ -181,8 +227,7 @@ class BuildingBlockYoshimora:
             second_point_extremity1 = vector_sum(
                 strat_point_extremity1, dir_vector1 * self.radius
             )
-            self.drawing.add(
-                dxf.line(strat_point_extremity1, second_point_extremity1))
+            self.drawing.add(dxf.line(strat_point_extremity1, second_point_extremity1))
 
             strat_point_extremity2 = end_point_of_line(
                 branch_positions[i], self.pannel_gap / 2, angles[i] + 90
@@ -193,10 +238,8 @@ class BuildingBlockYoshimora:
             second_point_extremity2 = vector_sum(
                 strat_point_extremity2, dir_vector2 * self.radius
             )
-            self.drawing.add(
-                dxf.line(strat_point_extremity2, second_point_extremity2))
-            self.drawing.add(
-                dxf.line(second_point_extremity1, second_point_extremity2))
+            self.drawing.add(dxf.line(strat_point_extremity2, second_point_extremity2))
+            self.drawing.add(dxf.line(second_point_extremity1, second_point_extremity2))
 
     def __call__(self) -> None:
         self.draw_building_block()
@@ -288,61 +331,39 @@ class YoshimoraTesselation:
 
 
 if __name__ == "__main__":
-    # branch1 = Branch(
-    #     start_point=(0, 0),
-    #     length=22,
-    #     angle=20,
+    branch1 = BranchTape(
+        start_point=(5, 0),
+        length=60,
+        angle=30,
+        count_beam=4,
+        pannel_gap=1.5,
+        beam_gap=5,
+        beam_length=3,
+        beam_width=5,
+        drawing=dxf.drawing("test/yoshimora_branch.dxf"),
+    )
+    branch1()
+    branch2 = Branch(
+        start_point=(5, 0),
+        length=60,
+        angle=30,
+        count_beam=4,
+        pannel_gap=1.2,
+        beam_gap=5,
+        beam_length=3,
+        beam_width=5,
+        drawing=dxf.drawing("test/yoshimora_branch.dxf"),
+    )
+    branch2()
+
+    # tesselation = YoshimoraTesselation(
+    #     center=(0, 0),
+    #     size=(5, 5),
+    #     radius=2,
+    #     length=25,
+    #     angle=60,
     #     count_beam=2,
     #     pannel_gap=1.2,
-    #     beam_gap=2.33,
-    #     beam_length=6.33,
-    #     beam_width=4.83,
+    #     drawing=dxf.drawing("test/yoshimura_tesselation.dxf"),
     # )
-    # branch1()
-    yoshimora1 = BuildingBlockYoshimora(
-        (0, 0), 2, 25, 45, 2, drawing=dxf.drawing("test/yoshimura_pattern.dxf")
-    )
-    yoshimora2 = BuildingBlockYoshimora(
-        (0, 0),
-        2,
-        25,
-        60,
-        2,
-        [True, True, True, True, True, False],
-        drawing=yoshimora1.drawing,
-    )
-    yoshimora3 = BuildingBlockYoshimora(
-        (100, 0),
-        2,
-        25,
-        60,
-        2,
-        [True, True, True, False, True, False],
-        pannel_gap=2,
-        drawing=yoshimora1.drawing,
-    )
-    yoshimora4 = BuildingBlockYoshimora(
-        (200, 0),
-        2,
-        50,
-        60,
-        3,
-        [True, True, True, True, True, True],
-        drawing=yoshimora1.drawing,
-    )
-    # yoshimora1()
-    yoshimora2()
-    # yoshimora3()
-    # yoshimora4()
-
-    tesselation = YoshimoraTesselation(
-        center=(0, 0),
-        size=(5, 5),
-        radius=2,
-        length=25,
-        angle=60,
-        count_beam=2,
-        pannel_gap=1.2,
-        drawing=dxf.drawing("test/yoshimura_tesselation.dxf"),
-    )
-    tesselation()
+    # tesselation()
