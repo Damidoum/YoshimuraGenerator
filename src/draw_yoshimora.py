@@ -68,13 +68,15 @@ class Branch:
             for i in range(self.count_beam):
                 # left beam slot
                 beam_point1 = end_point_of_line(
-                    start_point_beam, (self.beam_width - self.pannel_gap) / 2, angle
+                    start_point_beam, (self.beam_width -
+                                       self.pannel_gap) / 2, angle
                 )
                 beam_point2 = end_point_of_line(
                     beam_point1, self.beam_length, self.angle
                 )
                 beam_point3 = end_point_of_line(
-                    beam_point2, (self.beam_width - self.pannel_gap) / 2, angle + 180
+                    beam_point2, (self.beam_width -
+                                  self.pannel_gap) / 2, angle + 180
                 )
                 if i < self.count_beam - 1:
                     beam_point4 = end_point_of_line(
@@ -94,7 +96,8 @@ class Branch:
                 else:
                     self.drawing.add(
                         dxf.polyline(
-                            [start_point_beam, beam_point1, beam_point2, beam_point3]
+                            [start_point_beam, beam_point1,
+                                beam_point2, beam_point3]
                         )
                     )
                 start_point_beam = beam_point4
@@ -134,13 +137,16 @@ class BuildingBlockYoshimora:
 
     def compute_branch_position(self) -> list[tuple[float]]:
         branch_positions = []
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
+        angles = [0, self.angle, 180 - self.angle,
+                  180, 180 + self.angle, -self.angle]
         for angle in angles:
-            branch_positions.append(end_point_of_line(self.center, self.radius, angle))
+            branch_positions.append(end_point_of_line(
+                self.center, self.radius, angle))
         return branch_positions
 
     def draw_building_block(self) -> None:
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
+        angles = [0, self.angle, 180 - self.angle,
+                  180, 180 + self.angle, -self.angle]
         branch_positions = self.compute_branch_position()
         for i, branch_state in enumerate(self.activated_branch):
             if branch_state:
@@ -175,7 +181,8 @@ class BuildingBlockYoshimora:
             second_point_extremity1 = vector_sum(
                 strat_point_extremity1, dir_vector1 * self.radius
             )
-            self.drawing.add(dxf.line(strat_point_extremity1, second_point_extremity1))
+            self.drawing.add(
+                dxf.line(strat_point_extremity1, second_point_extremity1))
 
             strat_point_extremity2 = end_point_of_line(
                 branch_positions[i], self.pannel_gap / 2, angles[i] + 90
@@ -186,8 +193,10 @@ class BuildingBlockYoshimora:
             second_point_extremity2 = vector_sum(
                 strat_point_extremity2, dir_vector2 * self.radius
             )
-            self.drawing.add(dxf.line(strat_point_extremity2, second_point_extremity2))
-            self.drawing.add(dxf.line(second_point_extremity1, second_point_extremity2))
+            self.drawing.add(
+                dxf.line(strat_point_extremity2, second_point_extremity2))
+            self.drawing.add(
+                dxf.line(second_point_extremity1, second_point_extremity2))
 
     def __call__(self) -> None:
         self.draw_building_block()
