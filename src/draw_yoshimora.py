@@ -288,7 +288,7 @@ class CenterShim:
         self.draw_shim()
 
 
-class ShimSperator:
+class ShimSep:
     def __init__(
         self,
         position: tuple[float],
@@ -618,7 +618,7 @@ if __name__ == "__main__":
     )
     center_shim()
 
-    sep_shim = ShimSperator(
+    sep_shim = ShimSep(
         (20, 0), 0, 0.88, 0.67, 1.2, 2.33, beam_width=4.83, drawing=center_shim.drawing
     )
     sep_shim()
