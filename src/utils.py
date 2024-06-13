@@ -45,6 +45,19 @@ def vector_sum(vector1: tuple[float], vector2: tuple[float]) -> tuple[float]:
     return (vector1[0] + vector2[0], vector1[1] + vector2[1])
 
 
+def vector_multiply(vector: tuple[float], scalar: float) -> tuple[float]:
+    """Multiply a vector by a scalar.
+
+    Args:
+        vector (tuple[float]): vector to multiply
+        scalar (float): scalar to multiply the vector by
+
+    Returns:
+        tuple[float]: multiplied vector
+    """
+    return (vector[0] * scalar, vector[1] * scalar)
+
+
 def normalize_vector(vector: tuple[float]) -> tuple[float]:
     """Normalize a vector.
 
