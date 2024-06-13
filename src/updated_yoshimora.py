@@ -343,9 +343,9 @@ class BuildingBlockUpdatedYoshimora:
                         start_point=branch_positions[i],
                         length=length,
                         angle=angles[i],
-                        count_beam=self.count_beam,
+                        count_beam=count_beam,
                         pannel_gap=self.pannel_gap,
-                        beam_gap=self.beam_gap,
+                        beam_gap=beam_gap,
                         beam_length=self.beam_length,
                         beam_width=self.beam_width,
                         drawing=self.drawing,
@@ -701,6 +701,8 @@ if __name__ == "__main__":
         "position": (0, 0),
     }
     yoshimora = YoshimoraTesselation(
-        **pattern_settings, drawing=dxf.drawing("test/yoshimora_up_pattern.dxf")
+        **pattern_settings,
+        drawing=dxf.drawing("test/yoshimora_up_pattern.dxf"),
+        tape=True,
     )
     yoshimora()
