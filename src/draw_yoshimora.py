@@ -588,6 +588,8 @@ class Shim:
         beam_length=6.33,
         beam_width=4.83,
         drawing=dxf.drawing("shim.dxf"),
+        *args,
+        **kwargs,
     ) -> None:
         self.size = size
         self.position = position
@@ -774,6 +776,8 @@ class YoshimoraTesselation:
         beam_width=4.83,
         drawing=dxf.drawing("yoshimura_pattern.dxf"),
         tape=False,
+        *args,
+        **kwargs,
     ) -> None:
         self.size = size
         self.center = center
@@ -863,50 +867,36 @@ class YoshimoraTesselation:
 
 
 if __name__ == "__main__":
+    pattern_settings = {
+        "size": (3, 3),
+        "center": (0, 0),
+        "ratio": 0.88,
+        "radius": 2,
+        "length": 25,
+        "angle": 60,
+        "count_beam": 2,
+        "pannel_gap": 1.2,
+        "beam_gap": 2.33,
+        "beam_length": 6.33,
+        "beam_width": 4.83,
+        "margin": 0.67,
+        "position": (0, 0),
+    }
     tesselation = YoshimoraTesselation(
-        center=(0, 0),
-        size=(3, 3),
-        radius=2,
-        length=25,
-        angle=60,
-        count_beam=2,
-        pannel_gap=1.2,
-        beam_gap=2.33,
-        beam_length=6.33,
-        beam_width=4.83,
-        drawing=dxf.drawing("test/yoshimura_tesselation.dxf"),
+        **pattern_settings,
+        drawing=dxf.drawing("out/yoshimura_tesselation.dxf"),
     )
     tesselation()
 
     tesselationTape = YoshimoraTesselation(
-        center=(0, 0),
-        size=(3, 3),
-        radius=2,
-        length=25,
-        angle=60,
-        count_beam=2,
-        pannel_gap=1.2,
-        beam_gap=2.33,
-        beam_length=6.33,
-        beam_width=4.83,
-        drawing=dxf.drawing("test/yoshimura_tesselation_tape.dxf"),
+        **pattern_settings,
+        drawing=dxf.drawing("out/yoshimura_tesselation_tape.dxf"),
         tape=True,
     )
     tesselationTape()
 
     shimTesselation = Shim(
-        (3, 3),
-        (0, 0),
-        2,
-        25,
-        60,
-        0.88,
-        0.67,
-        2,
-        1.2,
-        2.33,
-        6.33,
-        4.83,
-        drawing=dxf.drawing("test/shim_tesselation.dxf"),
+        **pattern_settings,
+        drawing=dxf.drawing("out/shim_tesselation.dxf"),
     )
     shimTesselation()
