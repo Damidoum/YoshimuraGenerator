@@ -206,7 +206,6 @@ class CenterShim:
                         self.beam_width * 1 / self.ratio - self.beam_width,
                         angles[j] + 90,
                     )
-            # branch_positions.append(end_point_of_line(self.center, self.radius, angle))
             branch_positions.append(point)
         return branch_positions
 
@@ -236,7 +235,6 @@ class CenterShim:
                         angles[i] - 90,
                     )
                     self.drawing.add(dxf.line(start_point, end_shim))
-
                 shim_point1 = end_point_of_line(
                     start_point, length_extremity_lines, angles[i]
                 )
@@ -401,7 +399,7 @@ class BuildingBlockShimYoshimora:
             - self.margin
         ) / 2
         offset = (self.length - 2 * length_extremity_lines - 2 * self.margin) / (
-            self.count_beam - 1
+            self.count_beam
         )
         center_shim = CenterShim(
             self.center,
@@ -440,7 +438,10 @@ class BuildingBlockShimYoshimora:
                     )
                 position = end_point_of_line(
                     position,
-                    offset * (count + 1) - 3 / 2 * self.margin - self.beam_gap,
+                    length_extremity_lines
+                    + self.margin
+                    + offset * (count + 1)
+                    - (self.margin + self.beam_gap) / 2,
                     angles[i],
                 )
                 shim_sep = ShimSep(
@@ -578,6 +579,8 @@ class Shim:
         radius: float,
         length: float,
         angle: float,
+        ratio: float,
+        margin: float,
         count_beam: int,
         pannel_gap=1.2,
         beam_gap=2.33,
@@ -590,6 +593,8 @@ class Shim:
         self.radius = radius
         self.length = length
         self.angle = angle
+        self.ratio = ratio
+        self.margin = margin
         self.count_beam = count_beam
         self.pannel_gap = pannel_gap
         self.beam_gap = beam_gap
@@ -597,8 +602,145 @@ class Shim:
         self.beam_width = beam_width
         self.drawing = drawing
 
+    def compute_branch_position(self, center) -> list[tuple[float]]:
+        branch_positions = []
+        width = self.beam_width * 1 / self.ratio
+        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
+        for i, angle in enumerate(angles):
+            point = end_point_of_line(center, self.radius, angle)
+            for j in range(i):
+                if j == 0:
+                    point = end_point_of_line(
+                        point,
+                        (self.beam_width * 1 / self.ratio - self.beam_width) / 2,
+                        angles[j] + 90,
+                    )
+                else:
+                    point = end_point_of_line(
+                        point,
+                        self.beam_width * 1 / self.ratio - self.beam_width,
+                        angles[j] + 90,
+                    )
+            if i == 0:
+                point = end_point_of_line(
+                    point,
+                    (width - self.beam_width + self.pannel_gap) / 2,
+                    angles[i] - 90,
+                )
+            else:
+                point = end_point_of_line(point, self.pannel_gap / 2, angles[i] - 90)
+            point = end_point_of_line(
+                point, (width - self.beam_width + self.pannel_gap) / 2, angles[i] + 90
+            )
+            branch_positions.append(point)
+        return branch_positions
+
+    def compute_activated_branch(self, pos: tuple[int]) -> list[bool]:
+        activated_branch = [True for _ in range(6)]
+        if pos[1] > 0:
+            activated_branch[3] = False
+        if pos[0] > 0:
+            activated_branch[2] = False
+            if pos[1] < self.size[1] - 1:
+                activated_branch[1] = False
+        return activated_branch
+
+    def get_center_position(
+        self, branch_number: int, branch_position: tuple[float]
+    ) -> tuple[float]:
+        width = self.beam_width * 1 / self.ratio
+        angles = [
+            0,
+            self.angle,
+            180 - self.angle,
+            180,
+            180 + self.angle,
+            -self.angle,
+        ]
+        point = branch_position
+        point = end_point_of_line(
+            point,
+            (width - self.beam_width + self.pannel_gap) / 2,
+            angles[branch_number] - 90,
+        )
+        if branch_position == 0:
+            point = end_point_of_line(
+                point,
+                (width - self.beam_width + self.pannel_gap) / 2,
+                angles[branch_number] + 90,
+            )
+        else:
+            point = end_point_of_line(
+                point,
+                self.pannel_gap / 2,
+                angles[branch_number] + 90,
+            )
+        for i in list(range(0, branch_number))[::-1]:
+            if i == 0:
+                point = end_point_of_line(
+                    point,
+                    (self.beam_width * 1 / self.ratio - self.beam_width) / 2,
+                    angles[i] + 270,
+                )
+            else:
+                point = end_point_of_line(
+                    point,
+                    self.beam_width * 1 / self.ratio - self.beam_width,
+                    angles[i] + 270,
+                )
+        point = end_point_of_line(point, self.radius, angles[branch_number] + 180)
+        return point
+
+    def compute_block_position(self, pos: tuple[int]) -> tuple[float]:
+        center = self.position
+        block_position = end_point_of_line(center, self.radius, 0)
+        for i in range(pos[0]):
+            branch_position = self.compute_branch_position(center)
+            if i % 2 == 0:
+                block_position = branch_position[-1]
+                block_position = end_point_of_line(
+                    block_position, self.length, -self.angle
+                )
+                center = self.get_center_position(2, block_position)
+            else:
+                block_position = branch_position[-2]
+                block_position = end_point_of_line(
+                    block_position, self.length, self.angle + 180
+                )
+                center = self.get_center_position(1, block_position)
+
+        for _ in range(pos[1]):
+            block_position = end_point_of_line(center, self.radius, 0)
+            block_position = end_point_of_line(block_position, self.length, 0)
+            center = self.get_center_position(3, block_position)
+            block_position = end_point_of_line(center, self.radius, 0)
+        return [center, block_position]
+
     def draw_shim_sheet(self) -> None:
-        i, j = self.size
+        center = self.position
+        for i in range(self.size[0]):
+            for j in range(self.size[1]):
+                center, branch_position = self.compute_block_position((i, j))
+                activated_branch = self.compute_activated_branch((i, j))
+                buildingBlockShim = BuildingBlockShimYoshimora(
+                    center,
+                    self.radius,
+                    self.length,
+                    self.angle,
+                    self.ratio,
+                    self.margin,
+                    self.count_beam,
+                    self.pannel_gap,
+                    self.beam_gap,
+                    activated_branch,
+                    self.beam_length,
+                    self.beam_width,
+                    self.drawing,
+                )
+                buildingBlockShim()
+
+    def __call__(self) -> None:
+        self.draw_shim_sheet()
 
 
 class YoshimoraTesselation:
@@ -689,33 +831,18 @@ class YoshimoraTesselation:
         self.draw_tesselation()
 
 
-class BuildingBlockShim:
-    def __init__(
-        self,
-        start_point: tuple[float],
-        length: float,
-        angle: float,
-        activated_branch=[True for _ in range(3)],
-        beam_gap=2.33,
-        beam_length=6.33,
-        beam_width=4.83,
-        drawing=dxf.drawing("yoshimura_shim.dxf"),
-    ):
-        pass
-
-
 if __name__ == "__main__":
-    tesselation = YoshimoraTesselation(
-        center=(0, 0),
-        size=(3, 3),
-        radius=2,
-        length=25,
-        angle=60,
-        count_beam=2,
-        pannel_gap=1.2,
-        drawing=dxf.drawing("test/yoshimura_tesselation.dxf"),
-    )
-    tesselation()
+    # tesselation = YoshimoraTesselation(
+    #     center=(0, 0),
+    #     size=(3, 3),
+    #     radius=2,
+    #     length=25,
+    #     angle=60,
+    #     count_beam=2,
+    #     pannel_gap=1.2,
+    #     drawing=dxf.drawing("test/yoshimura_tesselation.dxf"),
+    # )
+    # tesselation()
 
     # tesselation_tape = YoshimoraTesselation(
     #     center=(200, 0),
@@ -746,5 +873,21 @@ if __name__ == "__main__":
         activated_branch=activated_branch,
         drawing=dxf.drawing("test/shim.dxf"),
     )
-
     shim()
+
+    shimTesselation = Shim(
+        (3, 3),
+        (0, 0),
+        2,
+        25,
+        60,
+        0.88,
+        0.67,
+        2,
+        1.2,
+        2.33,
+        6.33,
+        4.83,
+        drawing=dxf.drawing("test/shim_tesselation.dxf"),
+    )
+    shimTesselation()
