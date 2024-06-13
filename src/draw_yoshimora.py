@@ -867,19 +867,20 @@ class YoshimoraTesselation:
 
 
 if __name__ == "__main__":
+    scaling = 1
     pattern_settings = {
         "size": (3, 3),
         "center": (0, 0),
         "ratio": 0.88,
-        "radius": 2,
-        "length": 25,
+        "radius": 2 * scaling,
+        "length": 25 * scaling,
         "angle": 60,
         "count_beam": 2,
         "pannel_gap": 1.2,
-        "beam_gap": 2.33,
-        "beam_length": 6.33,
-        "beam_width": 4.83,
-        "margin": 0.67,
+        "beam_gap": 2.33 * scaling,
+        "beam_length": 6.33 * scaling,
+        "beam_width": 4.83 * scaling,
+        "margin": 0.67 * scaling,
         "position": (0, 0),
     }
     tesselation = YoshimoraTesselation(
