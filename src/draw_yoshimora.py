@@ -566,6 +566,7 @@ class BuildingBlockYoshimora:
                 self.drawing.add(
                     dxf.line(second_point_extremity1, second_point_extremity2)
                 )
+                self.drawing.save()
 
     def __call__(self) -> None:
         self.draw_building_block()
@@ -773,13 +774,28 @@ class YoshimoraTesselation:
         self.tape = tape
 
     def compute_activated_branch(self, pos: tuple[int]) -> list[bool]:
-        activated_branch = [True for _ in range(6)]
-        if pos[1] > 0:
-            activated_branch[3] = False
-        if pos[0] > 0:
-            activated_branch[2] = False
-            if pos[1] < self.size[1] - 1:
-                activated_branch[1] = False
+        activated_branch = [True] * 6
+
+        # Deactivate branches based on position
+        if pos[1] > 0:  # If pos[1] is greater than 0
+            activated_branch[3] = False  # Deactivate branch 3
+            if pos[0] > 0:  # If pos[0] is greater than 0
+                activated_branch[2] = False  # Deactivate branch 2
+
+        if (
+            pos[0] % 2 == 0 and pos[1] == 0 and pos[0] > 0
+        ):  # Special condition for even pos[0] and pos[1] equals 0
+            activated_branch[2] = False  # Deactivate branch 2
+
+        if (
+            pos[1] < self.size[1] - 1 and pos[0] > 0
+        ):  # If pos[1] is within bounds and pos[0] is greater than 0
+            activated_branch[1] = False  # Deactivate branch 1
+
+        if (
+            pos[1] == self.size[1] - 1 and pos[0] % 2 == 1
+        ):  # Special condition for pos[1] at upper bound and odd pos[0]
+            activated_branch[1] = False  # Deactivate branch 1
         return activated_branch
 
     def compute_branch_position(self, pos: tuple[int]) -> tuple[float]:
