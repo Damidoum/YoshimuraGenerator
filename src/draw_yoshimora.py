@@ -774,16 +774,16 @@ class YoshimoraTesselation:
 
     def compute_activated_branch(self, pos: tuple[int]) -> list[bool]:
         activated_branch = [True for _ in range(6)]
-        if pos[0] > 0:
-            activated_branch[3] = False
         if pos[1] > 0:
+            activated_branch[3] = False
+        if pos[0] > 0:
             activated_branch[2] = False
-            if pos[0] < self.size[0] - 1:
+            if pos[1] < self.size[1] - 1:
                 activated_branch[1] = False
         return activated_branch
 
     def compute_branch_position(self, pos: tuple[int]) -> tuple[float]:
-        if pos[1] % 2 == 0:
+        if pos[0] % 2 == 0:
             offset = end_point_of_line(
                 (0, 0), 2 * self.radius + self.length, self.angle
             )[0]
@@ -791,11 +791,11 @@ class YoshimoraTesselation:
             offset = 0
 
         vertical_mov = end_point_of_line(
-            self.center, pos[1] * (2 * self.radius + self.length), -self.angle
+            self.center, pos[0] * (2 * self.radius + self.length), -self.angle
         )
         horizontal_mov = end_point_of_line(
             self.center,
-            pos[0]
+            pos[1]
             * 2
             * math.cos(math.radians(self.angle))
             * (self.length + 2 * self.radius),
@@ -832,48 +832,36 @@ class YoshimoraTesselation:
 
 
 if __name__ == "__main__":
-    # tesselation = YoshimoraTesselation(
-    #     center=(0, 0),
-    #     size=(3, 3),
-    #     radius=2,
-    #     length=25,
-    #     angle=60,
-    #     count_beam=2,
-    #     pannel_gap=1.2,
-    #     drawing=dxf.drawing("test/yoshimura_tesselation.dxf"),
-    # )
-    # tesselation()
-
-    # tesselation_tape = YoshimoraTesselation(
-    #     center=(200, 0),
-    #     size=(5, 5),
-    #     radius=2,
-    #     length=25,
-    #     angle=60,
-    #     count_beam=2,
-    #     pannel_gap=1.2,
-    #     drawing=tesselation.drawing,
-    #     tape=True,
-    # )
-    # tesselation_tape()
-    activated_branch = [True for _ in range(6)]
-    activated_branch[0] = True
-    shim = BuildingBlockShimYoshimora(
-        (0, 0),
-        2,
-        25,
-        60,
-        0.88,
-        0.67,
-        2,
-        1.2,
-        2.3,
-        beam_width=4.83,
+    tesselation = YoshimoraTesselation(
+        center=(0, 0),
+        size=(3, 3),
+        radius=2,
+        length=25,
+        angle=60,
+        count_beam=2,
+        pannel_gap=1.2,
+        beam_gap=2.33,
         beam_length=6.33,
-        activated_branch=activated_branch,
-        drawing=dxf.drawing("test/shim.dxf"),
+        beam_width=4.83,
+        drawing=dxf.drawing("test/yoshimura_tesselation.dxf"),
     )
-    shim()
+    tesselation()
+
+    tesselationTape = YoshimoraTesselation(
+        center=(0, 0),
+        size=(3, 3),
+        radius=2,
+        length=25,
+        angle=60,
+        count_beam=2,
+        pannel_gap=1.2,
+        beam_gap=2.33,
+        beam_length=6.33,
+        beam_width=4.83,
+        drawing=dxf.drawing("test/yoshimura_tesselation_tape.dxf"),
+        tape=True,
+    )
+    tesselationTape()
 
     shimTesselation = Shim(
         (3, 3),
