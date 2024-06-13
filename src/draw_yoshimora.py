@@ -1,6 +1,12 @@
 from typing import Any
 from dxfwrite import DXFEngine as dxf
-from utils import end_point_of_line, normalize_vector, vector_difference, vector_sum
+from utils import (
+    end_point_of_line,
+    normalize_vector,
+    vector_difference,
+    vector_sum,
+    vector_multiply,
+)
 import math
 
 
@@ -538,30 +544,32 @@ class BuildingBlockYoshimora:
                 branch()
             # draw extremity of the branch
             if not self.tape:
-                strat_point_extremity1 = end_point_of_line(
+                start_point_extremity1 = end_point_of_line(
                     branch_positions[i], self.pannel_gap / 2, angles[i] - 90
                 )
                 dir_vector1 = normalize_vector(
-                    vector_difference(self.center, strat_point_extremity1)
+                    vector_difference(self.center, start_point_extremity1)
                 )
                 second_point_extremity1 = vector_sum(
-                    strat_point_extremity1, dir_vector1 * self.radius
+                    start_point_extremity1,
+                    vector_multiply(dir_vector1, self.radius / 2),
                 )
                 self.drawing.add(
-                    dxf.line(strat_point_extremity1, second_point_extremity1)
+                    dxf.line(start_point_extremity1, second_point_extremity1)
                 )
 
-                strat_point_extremity2 = end_point_of_line(
+                start_point_extremity2 = end_point_of_line(
                     branch_positions[i], self.pannel_gap / 2, angles[i] + 90
                 )
                 dir_vector2 = normalize_vector(
-                    vector_difference(self.center, strat_point_extremity2)
+                    vector_difference(self.center, start_point_extremity2)
                 )
                 second_point_extremity2 = vector_sum(
-                    strat_point_extremity2, dir_vector2 * self.radius
+                    start_point_extremity2,
+                    vector_multiply(dir_vector2, self.radius / 2),
                 )
                 self.drawing.add(
-                    dxf.line(strat_point_extremity2, second_point_extremity2)
+                    dxf.line(start_point_extremity2, second_point_extremity2)
                 )
                 self.drawing.add(
                     dxf.line(second_point_extremity1, second_point_extremity2)
