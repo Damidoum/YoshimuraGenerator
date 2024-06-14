@@ -20,8 +20,8 @@ class CenterShim:
         angle: float,
         ratio: float,
         margin: float,
-        count_beam: int,
-        pannel_gap: 1.2,
+        beam_count: int,
+        panel_gap: 1.2,
         beam_gap: 2.2,
         activated_branch=[True for _ in range(8)],
         beam_length=6.33,
@@ -36,8 +36,8 @@ class CenterShim:
         self.angle = angle
         self.ratio = ratio
         self.margin = margin
-        self.count_beam = count_beam
-        self.pannel_gap = pannel_gap
+        self.beam_count = beam_count
+        self.panel_gap = panel_gap
         self.beam_gap = beam_gap
         self.activated_branch = activated_branch
         self.beam_length = beam_length
@@ -89,7 +89,7 @@ class CenterShim:
         ]
         for i, branch_state in enumerate(self.activated_branch):
             if branch_state:
-                count_beam = self.count_beam
+                beam_count = self.beam_count
                 if i == 0 or i == 4:
                     length = (
                         2
@@ -104,7 +104,7 @@ class CenterShim:
                         * (self.length + 2 * self.radius)
                         - 2 * self.radius
                     )
-                    count_beam = self.count_beam * 2
+                    beam_count = self.beam_count * 2
                     beam_gap = self.beam_gap * length / (self.length * 2)
                 else:
                     length = self.length
@@ -112,20 +112,20 @@ class CenterShim:
 
                 length_extremity_lines = (
                     length
-                    - self.beam_length * count_beam
-                    - beam_gap * (count_beam - 1)
+                    - self.beam_length * beam_count
+                    - beam_gap * (beam_count - 1)
                     - self.margin
                 ) / 2
                 if i == 0:
                     start_point = end_point_of_line(
                         branch_position[i],
-                        (width - self.beam_width + self.pannel_gap) / 2,
+                        (width - self.beam_width + self.panel_gap) / 2,
                         angles[i] - 90,
                     )
                 else:
                     start_point = end_point_of_line(
                         branch_position[i],
-                        self.pannel_gap / 2,
+                        self.panel_gap / 2,
                         angles[i] - 90,
                     )
                     self.drawing.add(dxf.line(start_point, end_shim))
@@ -134,7 +134,7 @@ class CenterShim:
                 )
                 shim_point2 = end_point_of_line(
                     shim_point1,
-                    (self.beam_width - self.pannel_gap) / 2,
+                    (self.beam_width - self.panel_gap) / 2,
                     angles[i] - 90,
                 )
                 shim_point3 = end_point_of_line(shim_point2, self.margin, angles[i])
@@ -144,7 +144,7 @@ class CenterShim:
                 )
                 shim_point6 = end_point_of_line(
                     shim_point5,
-                    (self.beam_width - self.pannel_gap) / 2,
+                    (self.beam_width - self.panel_gap) / 2,
                     angles[i] - 90,
                 )
                 end_shim = end_point_of_line(
@@ -169,7 +169,7 @@ class CenterShim:
                 end_shim,
                 end_point_of_line(
                     branch_position[0],
-                    (width - self.beam_width + self.pannel_gap) / 2,
+                    (width - self.beam_width + self.panel_gap) / 2,
                     angles[0] - 90,
                 ),
             )
@@ -189,8 +189,8 @@ class BuildingBlockUpdatedShimYoshimora:
         angle: float,
         ratio: float,
         margin: float,
-        count_beam: int,
-        pannel_gap: 1.2,
+        beam_count: int,
+        panel_gap: 1.2,
         beam_gap: 2.2,
         activated_branch=[True for _ in range(8)],
         beam_length=6.33,
@@ -205,8 +205,8 @@ class BuildingBlockUpdatedShimYoshimora:
         self.angle = angle
         self.ratio = ratio
         self.margin = margin
-        self.count_beam = count_beam
-        self.pannel_gap = pannel_gap
+        self.beam_count = beam_count
+        self.panel_gap = panel_gap
         self.beam_gap = beam_gap
         self.activated_branch = activated_branch
         self.beam_length = beam_length
@@ -231,8 +231,8 @@ class BuildingBlockUpdatedShimYoshimora:
             self.angle,
             self.ratio,
             self.margin,
-            self.count_beam,
-            self.pannel_gap,
+            self.beam_count,
+            self.panel_gap,
             self.beam_gap,
             [True for _ in range(8)],
             self.beam_length,
@@ -243,7 +243,7 @@ class BuildingBlockUpdatedShimYoshimora:
         branch_position = center_shim.compute_branch_position()
         width = self.beam_width * 1 / self.ratio
         for i, branch_state in enumerate(self.activated_branch):
-            count_beam = self.count_beam
+            beam_count = self.beam_count
             if i == 0 or i == 4:
                 length = (
                     2
@@ -258,21 +258,21 @@ class BuildingBlockUpdatedShimYoshimora:
                     * (self.length + 2 * self.radius)
                     - 2 * self.radius
                 )
-                count_beam = self.count_beam * 2
+                beam_count = self.beam_count * 2
                 beam_gap = self.beam_gap * length / (self.length * 2)
             else:
                 length = self.length
                 beam_gap = self.beam_gap * length / self.length
             length_extremity_lines = (
                 length
-                - self.beam_length * count_beam
-                - beam_gap * (count_beam - 1)
+                - self.beam_length * beam_count
+                - beam_gap * (beam_count - 1)
                 - self.margin
             ) / 2
             offset = (length - 2 * length_extremity_lines - 2 * self.margin) / (
-                count_beam
+                beam_count
             )
-            for count in range(count_beam - 1):
+            for count in range(beam_count - 1):
                 if not branch_state:
                     continue
                 if i == 0:
@@ -280,12 +280,12 @@ class BuildingBlockUpdatedShimYoshimora:
                 else:
                     position = end_point_of_line(
                         branch_position[i],
-                        self.pannel_gap / 2,
+                        self.panel_gap / 2,
                         angles[i] - 90,
                     )
                     position = end_point_of_line(
                         position,
-                        (width - self.beam_width + self.pannel_gap) / 2,
+                        (width - self.beam_width + self.panel_gap) / 2,
                         angles[i] + 90,
                     )
                 position = end_point_of_line(
@@ -301,7 +301,7 @@ class BuildingBlockUpdatedShimYoshimora:
                     angles[i],
                     self.ratio,
                     self.margin,
-                    self.pannel_gap,
+                    self.panel_gap,
                     beam_gap,
                     self.beam_length,
                     self.beam_width,
@@ -320,9 +320,9 @@ class BuildingBlockUpdatedYoshimora:
         radius: float,
         length: float,
         angle: float,
-        count_beam: int,
+        beam_count: int,
         activated_branch=[True for _ in range(8)],
-        pannel_gap=1.2,
+        panel_gap=1.2,
         beam_gap=2.33,
         beam_length=6.33,
         beam_width=4.83,
@@ -335,9 +335,9 @@ class BuildingBlockUpdatedYoshimora:
         self.radius = radius
         self.length = length
         self.angle = angle
-        self.count_beam = count_beam
+        self.beam_count = beam_count
         self.activated_branch = activated_branch
-        self.pannel_gap = pannel_gap
+        self.panel_gap = panel_gap
         self.beam_gap = beam_gap
         self.beam_length = beam_length
         self.beam_width = beam_width
@@ -375,7 +375,7 @@ class BuildingBlockUpdatedYoshimora:
         for i, branch_state in enumerate(self.activated_branch):
             if branch_state:
                 # adapt the length of the branch for the tesselation
-                count_beam = self.count_beam
+                beam_count = self.beam_count
                 if i == 0 or i == 4:
                     length = (
                         2
@@ -390,7 +390,7 @@ class BuildingBlockUpdatedYoshimora:
                         * (self.length + 2 * self.radius)
                         - 2 * self.radius
                     )
-                    count_beam = self.count_beam * 2
+                    beam_count = self.beam_count * 2
                     beam_gap = self.beam_gap * length / (self.length * 2)
                 else:
                     length = self.length
@@ -400,8 +400,8 @@ class BuildingBlockUpdatedYoshimora:
                         start_point=branch_positions[i],
                         length=length,
                         angle=angles[i],
-                        count_beam=count_beam,
-                        pannel_gap=self.pannel_gap,
+                        beam_count=beam_count,
+                        panel_gap=self.panel_gap,
                         beam_gap=beam_gap,
                         beam_length=self.beam_length,
                         beam_width=self.beam_width,
@@ -412,8 +412,8 @@ class BuildingBlockUpdatedYoshimora:
                         start_point=branch_positions[i],
                         length=length,
                         angle=angles[i],
-                        count_beam=count_beam,
-                        pannel_gap=self.pannel_gap,
+                        beam_count=beam_count,
+                        panel_gap=self.panel_gap,
                         beam_gap=beam_gap,
                         beam_length=self.beam_length,
                         beam_width=self.beam_width,
@@ -423,7 +423,7 @@ class BuildingBlockUpdatedYoshimora:
             # draw extremity of the branch
             if not self.tape:
                 start_point_extremity1 = end_point_of_line(
-                    branch_positions[i], self.pannel_gap / 2, angles[i] - 90
+                    branch_positions[i], self.panel_gap / 2, angles[i] - 90
                 )
                 dir_vector1 = normalize_vector(
                     vector_difference(self.center, start_point_extremity1)
@@ -437,7 +437,7 @@ class BuildingBlockUpdatedYoshimora:
                 )
 
                 start_point_extremity2 = end_point_of_line(
-                    branch_positions[i], self.pannel_gap / 2, angles[i] + 90
+                    branch_positions[i], self.panel_gap / 2, angles[i] + 90
                 )
                 dir_vector2 = normalize_vector(
                     vector_difference(self.center, start_point_extremity2)
@@ -468,8 +468,8 @@ class Shim:
         angle: float,
         ratio: float,
         margin: float,
-        count_beam: int,
-        pannel_gap=1.2,
+        beam_count: int,
+        panel_gap=1.2,
         beam_gap=2.33,
         beam_length=6.33,
         beam_width=4.83,
@@ -484,8 +484,8 @@ class Shim:
         self.angle = angle
         self.ratio = ratio
         self.margin = margin
-        self.count_beam = count_beam
-        self.pannel_gap = pannel_gap
+        self.beam_count = beam_count
+        self.panel_gap = panel_gap
         self.beam_gap = beam_gap
         self.beam_length = beam_length
         self.beam_width = beam_width
@@ -522,13 +522,13 @@ class Shim:
             if i == 0:
                 point = end_point_of_line(
                     point,
-                    (width - self.beam_width + self.pannel_gap) / 2,
+                    (width - self.beam_width + self.panel_gap) / 2,
                     angles[i] - 90,
                 )
             else:
-                point = end_point_of_line(point, self.pannel_gap / 2, angles[i] - 90)
+                point = end_point_of_line(point, self.panel_gap / 2, angles[i] - 90)
             point = end_point_of_line(
-                point, (width - self.beam_width + self.pannel_gap) / 2, angles[i] + 90
+                point, (width - self.beam_width + self.panel_gap) / 2, angles[i] + 90
             )
             branch_positions.append(point)
         return branch_positions
@@ -575,19 +575,19 @@ class Shim:
         point = branch_position
         point = end_point_of_line(
             point,
-            (width - self.beam_width + self.pannel_gap) / 2,
+            (width - self.beam_width + self.panel_gap) / 2,
             angles[branch_number] - 90,
         )
         if branch_position == 0:
             point = end_point_of_line(
                 point,
-                (width - self.beam_width + self.pannel_gap) / 2,
+                (width - self.beam_width + self.panel_gap) / 2,
                 angles[branch_number] + 90,
             )
         else:
             point = end_point_of_line(
                 point,
-                self.pannel_gap / 2,
+                self.panel_gap / 2,
                 angles[branch_number] + 90,
             )
         for i in list(range(0, branch_number))[::-1]:
@@ -648,8 +648,8 @@ class Shim:
                     self.angle,
                     self.ratio,
                     self.margin,
-                    self.count_beam,
-                    self.pannel_gap,
+                    self.beam_count,
+                    self.panel_gap,
                     self.beam_gap,
                     activated_branch,
                     self.beam_length,
@@ -670,8 +670,8 @@ class YoshimoraTesselation:
         radius: float,
         length: float,
         angle: float,
-        count_beam: int,
-        pannel_gap=1.2,
+        beam_count: int,
+        panel_gap=1.2,
         beam_gap=2.33,
         beam_length=6.33,
         beam_width=4.83,
@@ -685,8 +685,8 @@ class YoshimoraTesselation:
         self.radius = radius
         self.length = length
         self.angle = angle
-        self.count_beam = count_beam
-        self.pannel_gap = pannel_gap
+        self.beam_count = beam_count
+        self.panel_gap = panel_gap
         self.beam_gap = beam_gap
         self.beam_length = beam_length
         self.beam_width = beam_width
@@ -752,9 +752,9 @@ class YoshimoraTesselation:
                     radius=self.radius,
                     length=self.length,
                     angle=self.angle,
-                    count_beam=self.count_beam,
+                    beam_count=self.beam_count,
                     activated_branch=activated_branch,
-                    pannel_gap=self.pannel_gap,
+                    panel_gap=self.panel_gap,
                     beam_gap=self.beam_gap,
                     beam_length=self.beam_length,
                     beam_width=self.beam_width,
@@ -776,8 +776,8 @@ if __name__ == "__main__":
         "radius": 2 * scaling,
         "length": 28 * scaling,
         "angle": 60,
-        "count_beam": 2,
-        "pannel_gap": 1.2,
+        "beam_count": 2,
+        "panel_gap": 1.2,
         "beam_gap": 4 * scaling,
         "beam_length": 6.33 * scaling,
         "beam_width": 4.83 * scaling,
