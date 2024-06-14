@@ -494,7 +494,16 @@ class Shim:
     def compute_branch_position(self, center) -> list[tuple[float]]:
         branch_positions = []
         width = self.beam_width * 1 / self.ratio
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
+        angles = [
+            0,
+            self.angle,
+            90,
+            180 - self.angle,
+            180,
+            180 + self.angle,
+            -90,
+            -self.angle,
+        ]
         for i, angle in enumerate(angles):
             point = end_point_of_line(center, self.radius, angle)
             for j in range(i):
@@ -529,14 +538,14 @@ class Shim:
 
         # Deactivate branches based on position
         if pos[1] > 0:  # If pos[1] is greater than 0
-            activated_branch[3] = False  # Deactivate branch 3
+            activated_branch[4] = False  # Deactivate branch 4
             if pos[0] > 0:  # If pos[0] is greater than 0
-                activated_branch[2] = False  # Deactivate branch 2
+                activated_branch[3] = False  # Deactivate branch 2
 
         if (
             pos[0] % 2 == 0 and pos[1] == 0 and pos[0] > 0
         ):  # Special condition for even pos[0] and pos[1] equals 0
-            activated_branch[2] = False  # Deactivate branch 2
+            activated_branch[3] = False  # Deactivate branch 3
 
         if (
             pos[1] < self.size[1] - 1 and pos[0] > 0
@@ -602,8 +611,9 @@ class Shim:
         block_position = end_point_of_line(center, self.radius, 0)
         for i in range(pos[0]):
             branch_position = self.compute_branch_position(center)
+
             if i % 2 == 0:
-                block_position = branch_position[-2]
+                block_position = branch_position[-3]
                 block_position = end_point_of_line(
                     block_position, self.length, self.angle + 180
                 )
@@ -613,12 +623,15 @@ class Shim:
                 block_position = end_point_of_line(
                     block_position, self.length, -self.angle
                 )
-                center = self.get_center_position(2, block_position)
+                center = self.get_center_position(3, block_position)
 
         for _ in range(pos[1]):
             block_position = end_point_of_line(center, self.radius, 0)
-            block_position = end_point_of_line(block_position, self.length, 0)
-            center = self.get_center_position(3, block_position)
+            length = (
+                2 * math.cos(math.radians(self.angle)) * (self.length + 2 * self.radius)
+            ) - 2 * self.radius
+            block_position = end_point_of_line(block_position, length, 0)
+            center = self.get_center_position(4, block_position)
             block_position = end_point_of_line(center, self.radius, 0)
         return [center, block_position]
 
@@ -762,7 +775,7 @@ if __name__ == "__main__":
         "ratio": 0.88,
         "radius": 2 * scaling,
         "length": 28 * scaling,
-        "angle": 45,
+        "angle": 60,
         "count_beam": 2,
         "pannel_gap": 1.2,
         "beam_gap": 4 * scaling,
