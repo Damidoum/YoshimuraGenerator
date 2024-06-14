@@ -7,7 +7,7 @@ from utils import (
     vector_sum,
     vector_multiply,
 )
-from draw_yoshimora import Branch, BranchTape, ShimSep
+from yoshimora_miura_plastic import Branch, BranchTape, ShimSep
 import math
 
 
