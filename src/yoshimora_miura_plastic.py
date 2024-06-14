@@ -13,7 +13,7 @@ import math
 class Branch:
     def __init__(
         self,
-        start_point: tuple[float],
+        position: tuple[float],
         length: float,
         angle: float,
         beam_count: int,
@@ -23,8 +23,8 @@ class Branch:
         beam_width=4.83,
         drawing=dxf.drawing("yoshimura_branch.dxf"),
     ) -> None:
-        self.position = start_point
-        self.end_point = end_point_of_line(start_point, length, angle)
+        self.position = position
+        self.end_point = end_point_of_line(self.position, length, angle)
         self.angle = angle
         self.length = length
         self.beam_count = beam_count
@@ -253,89 +253,129 @@ class BuildingBlockYoshimora:
         self.beam_width = beam_width
         self.drawing = drawing
         self.tape = tape
+        self.angles = [
+            0,
+            self.angle,
+            180 - self.angle,
+            180,
+            180 + self.angle,
+            -self.angle,
+        ]
 
-    def compute_branch_position(self) -> list[tuple[float]]:
+    def _compute_branch_position(self) -> list[tuple[float]]:
+        """Compute the position of the branches
+
+        Returns:
+            list[tuple[float]]: list of the position of the branches in the order of the angles
+        """
         branch_positions = []
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
-        for angle in angles:
+        for angle in self.angles:
             branch_positions.append(end_point_of_line(self.center, self.radius, angle))
         return branch_positions
 
-    def draw_building_block(self) -> None:
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
-        branch_positions = self.compute_branch_position()
+    def _get_horizontal_branch_length(self) -> float:
+        """Compute the length of the horizontal branch of the building block
+
+        Returns:
+            float: length of the horizontal branch
+        """
+        return (
+            2 * math.cos(math.radians(self.angle)) * (self.length + 2 * self.radius)
+        ) - 2 * self.radius
+
+    def _create_branch(
+        self, position: tuple[float], length: float, angle: float
+    ) -> Any:
+        """Create a branch or a tape branch depending on the tape attribute
+
+        Args:
+            position (tuple[float]): position of the branch
+            length (float): length of the branch (depending of the branch position in the building block)
+            angle (float): angle of the branch
+
+        Returns:
+            Any: branch or tape branch object
+        """
+        if not self.tape:
+            return Branch(
+                position=position,
+                length=length,
+                angle=angle,
+                beam_count=self.beam_count,
+                panel_gap=self.panel_gap,
+                beam_gap=self.beam_gap,
+                beam_length=self.beam_length,
+                beam_width=self.beam_width,
+                drawing=self.drawing,
+            )
+        else:
+            return BranchTape(
+                position=position,
+                length=length,
+                angle=angle,
+                beam_count=self.beam_count,
+                panel_gap=self.panel_gap,
+                beam_gap=self.beam_gap,
+                beam_length=self.beam_length,
+                beam_width=self.beam_width,
+                drawing=self.drawing,
+            )
+
+    def _draw_branch_center_support(self, position: tuple[float], angle: float) -> None:
+        """Draw the center support of the branch useful for the manufacturing
+
+        Args:
+            position (tuple[float]): position of the branch
+            angle (float): angle of the branch
+        """
+        start_point_extremity1 = end_point_of_line(
+            position, self.panel_gap / 2, angle - 90
+        )
+        dir_vector1 = normalize_vector(
+            vector_difference(self.center, start_point_extremity1)
+        )
+        second_point_extremity1 = vector_sum(
+            start_point_extremity1,
+            vector_multiply(dir_vector1, self.radius / 2),
+        )
+        self.drawing.add(dxf.line(start_point_extremity1, second_point_extremity1))
+
+        start_point_extremity2 = end_point_of_line(
+            position, self.panel_gap / 2, angle + 90
+        )
+        dir_vector2 = normalize_vector(
+            vector_difference(self.center, start_point_extremity2)
+        )
+        second_point_extremity2 = vector_sum(
+            start_point_extremity2,
+            vector_multiply(dir_vector2, self.radius / 2),
+        )
+        self.drawing.add(dxf.line(start_point_extremity2, second_point_extremity2))
+        self.drawing.add(dxf.line(second_point_extremity1, second_point_extremity2))
+        self.drawing.save()
+
+    def _draw_building_block(self) -> None:
+        """Draw the building block with the given parameters"""
+        branch_positions = self._compute_branch_position()
         for i, branch_state in enumerate(self.activated_branch):
-            if branch_state:
+            if branch_state:  # branch is activated
                 # adapt the length of the branch for the tesselation
                 if i == 0 or i == 3:
-                    length = (
-                        2
-                        * math.cos(math.radians(self.angle))
-                        * (self.length + 2 * self.radius)
-                    ) - 2 * self.radius
+                    length = self._get_horizontal_branch_length()
                 else:
                     length = self.length
-                if not self.tape:
-                    branch = Branch(
-                        start_point=branch_positions[i],
-                        length=length,
-                        angle=angles[i],
-                        beam_count=self.beam_count,
-                        panel_gap=self.panel_gap,
-                        beam_gap=self.beam_gap,
-                        beam_length=self.beam_length,
-                        beam_width=self.beam_width,
-                        drawing=self.drawing,
-                    )
-                else:
-                    branch = BranchTape(
-                        start_point=branch_positions[i],
-                        length=length,
-                        angle=angles[i],
-                        beam_count=self.beam_count,
-                        panel_gap=self.panel_gap,
-                        beam_gap=self.beam_gap,
-                        beam_length=self.beam_length,
-                        beam_width=self.beam_width,
-                        drawing=self.drawing,
-                    )
-                branch()
-            # draw extremity of the branch
-            if not self.tape:
-                start_point_extremity1 = end_point_of_line(
-                    branch_positions[i], self.panel_gap / 2, angles[i] - 90
-                )
-                dir_vector1 = normalize_vector(
-                    vector_difference(self.center, start_point_extremity1)
-                )
-                second_point_extremity1 = vector_sum(
-                    start_point_extremity1,
-                    vector_multiply(dir_vector1, self.radius / 2),
-                )
-                self.drawing.add(
-                    dxf.line(start_point_extremity1, second_point_extremity1)
-                )
+                branch = self._create_branch(
+                    branch_positions[i], length, self.angles[i]
+                )  # create the i-th branch
+                branch()  # draw the branch
 
-                start_point_extremity2 = end_point_of_line(
-                    branch_positions[i], self.panel_gap / 2, angles[i] + 90
-                )
-                dir_vector2 = normalize_vector(
-                    vector_difference(self.center, start_point_extremity2)
-                )
-                second_point_extremity2 = vector_sum(
-                    start_point_extremity2,
-                    vector_multiply(dir_vector2, self.radius / 2),
-                )
-                self.drawing.add(
-                    dxf.line(start_point_extremity2, second_point_extremity2)
-                )
-                self.drawing.add(
-                    dxf.line(second_point_extremity1, second_point_extremity2)
-                )
-                self.drawing.save()
+            if not self.tape:
+                self._draw_branch_center_support(
+                    branch_positions[i], self.angles[i]
+                )  # draw the center support
 
     def __call__(self) -> None:
-        self.draw_building_block()
+        self._draw_building_block()
 
 
 class YoshimoraTesselation:
@@ -450,8 +490,8 @@ if __name__ == "__main__":
         "center": (0, 0),
         "ratio": 0.88,
         "radius": 2 * scaling,
-        "length": 25 * scaling,
-        "angle": 60,
+        "length": 28 * scaling,
+        "angle": 50,
         "beam_count": 2,
         "panel_gap": 1.2,
         "beam_gap": 2.33 * scaling,
