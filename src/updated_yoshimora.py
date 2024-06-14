@@ -23,10 +23,12 @@ class CenterShim:
         count_beam: int,
         pannel_gap: 1.2,
         beam_gap: 2.2,
-        activated_branch=[True for _ in range(6)],
+        activated_branch=[True for _ in range(8)],
         beam_length=6.33,
         beam_width=4.33,
         drawing=dxf.drawing("yoshimora_shim.dxf"),
+        *args,
+        **kwargs,
     ):
         self.center = center
         self.radius = radius
@@ -44,7 +46,16 @@ class CenterShim:
 
     def compute_branch_position(self) -> list[tuple[float]]:
         branch_positions = []
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
+        angles = [
+            0,
+            self.angle,
+            90,
+            180 - self.angle,
+            180,
+            180 + self.angle,
+            -90,
+            -self.angle,
+        ]
         for i, angle in enumerate(angles):
             point = end_point_of_line(self.center, self.radius, angle)
             for j in range(i):
@@ -65,17 +76,46 @@ class CenterShim:
 
     def draw_shim(self):
         width = self.beam_width * 1 / self.ratio
-        length_extremity_lines = (
-            self.length
-            - self.beam_length * self.count_beam
-            - self.beam_gap * (self.count_beam - 1)
-            - self.margin
-        ) / 2
-
         branch_position = self.compute_branch_position()
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
+        angles = [
+            0,
+            self.angle,
+            90,
+            180 - self.angle,
+            180,
+            180 + self.angle,
+            -90,
+            -self.angle,
+        ]
         for i, branch_state in enumerate(self.activated_branch):
             if branch_state:
+                count_beam = self.count_beam
+                if i == 0 or i == 4:
+                    length = (
+                        2
+                        * math.cos(math.radians(self.angle))
+                        * (self.length + 2 * self.radius)
+                    ) - 2 * self.radius
+                    beam_gap = self.beam_gap * 3 / 2 * length / self.length
+                elif i == 2 or i == 6:
+                    length = (
+                        2
+                        * math.cos(math.radians(90 - self.angle))
+                        * (self.length + 2 * self.radius)
+                        - 2 * self.radius
+                    )
+                    count_beam = self.count_beam * 2
+                    beam_gap = self.beam_gap * length / (self.length * 2)
+                else:
+                    length = self.length
+                    beam_gap = self.beam_gap * length / self.length
+
+                length_extremity_lines = (
+                    length
+                    - self.beam_length * count_beam
+                    - beam_gap * (count_beam - 1)
+                    - self.margin
+                ) / 2
                 if i == 0:
                     start_point = end_point_of_line(
                         branch_position[i],
@@ -152,7 +192,7 @@ class BuildingBlockUpdatedShimYoshimora:
         count_beam: int,
         pannel_gap: 1.2,
         beam_gap: 2.2,
-        activated_branch=[True for _ in range(6)],
+        activated_branch=[True for _ in range(8)],
         beam_length=6.33,
         beam_width=4.33,
         drawing=dxf.drawing("yoshimora_shim.dxf"),
@@ -174,16 +214,16 @@ class BuildingBlockUpdatedShimYoshimora:
         self.drawing = drawing
 
     def draw_shim(self) -> None:
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
-        length_extremity_lines = (
-            self.length
-            - self.beam_length * self.count_beam
-            - self.beam_gap * (self.count_beam - 1)
-            - self.margin
-        ) / 2
-        offset = (self.length - 2 * length_extremity_lines - 2 * self.margin) / (
-            self.count_beam
-        )
+        angles = [
+            0,
+            self.angle,
+            90,
+            180 - self.angle,
+            180,
+            180 + self.angle,
+            -90,
+            -self.angle,
+        ]
         center_shim = CenterShim(
             self.center,
             self.radius,
@@ -194,7 +234,7 @@ class BuildingBlockUpdatedShimYoshimora:
             self.count_beam,
             self.pannel_gap,
             self.beam_gap,
-            [True for _ in range(6)],
+            [True for _ in range(8)],
             self.beam_length,
             self.beam_width,
             self.drawing,
@@ -203,7 +243,36 @@ class BuildingBlockUpdatedShimYoshimora:
         branch_position = center_shim.compute_branch_position()
         width = self.beam_width * 1 / self.ratio
         for i, branch_state in enumerate(self.activated_branch):
-            for count in range(self.count_beam - 1):
+            count_beam = self.count_beam
+            if i == 0 or i == 4:
+                length = (
+                    2
+                    * math.cos(math.radians(self.angle))
+                    * (self.length + 2 * self.radius)
+                ) - 2 * self.radius
+                beam_gap = self.beam_gap * 3 / 2 * length / self.length
+            elif i == 2 or i == 6:
+                length = (
+                    2
+                    * math.cos(math.radians(90 - self.angle))
+                    * (self.length + 2 * self.radius)
+                    - 2 * self.radius
+                )
+                count_beam = self.count_beam * 2
+                beam_gap = self.beam_gap * length / (self.length * 2)
+            else:
+                length = self.length
+                beam_gap = self.beam_gap * length / self.length
+            length_extremity_lines = (
+                length
+                - self.beam_length * count_beam
+                - beam_gap * (count_beam - 1)
+                - self.margin
+            ) / 2
+            offset = (length - 2 * length_extremity_lines - 2 * self.margin) / (
+                count_beam
+            )
+            for count in range(count_beam - 1):
                 if not branch_state:
                     continue
                 if i == 0:
@@ -223,8 +292,8 @@ class BuildingBlockUpdatedShimYoshimora:
                     position,
                     length_extremity_lines
                     + self.margin
-                    + offset * (count + 1)
-                    - (self.margin + self.beam_gap) / 2,
+                    + (self.beam_length - self.margin) * (count + 1)
+                    + (beam_gap + self.margin) * count,
                     angles[i],
                 )
                 shim_sep = ShimSep(
@@ -233,7 +302,7 @@ class BuildingBlockUpdatedShimYoshimora:
                     self.ratio,
                     self.margin,
                     self.pannel_gap,
-                    self.beam_gap,
+                    beam_gap,
                     self.beam_length,
                     self.beam_width,
                     self.drawing,
@@ -456,7 +525,7 @@ class Shim:
         return branch_positions
 
     def compute_activated_branch(self, pos: tuple[int]) -> list[bool]:
-        activated_branch = [True] * 6
+        activated_branch = [True] * 8
 
         # Deactivate branches based on position
         if pos[1] > 0:  # If pos[1] is greater than 0
@@ -487,9 +556,11 @@ class Shim:
         angles = [
             0,
             self.angle,
+            90,
             180 - self.angle,
             180,
             180 + self.angle,
+            -90,
             -self.angle,
         ]
         point = branch_position
@@ -557,7 +628,7 @@ class Shim:
             for j in range(self.size[1]):
                 center, branch_position = self.compute_block_position((i, j))
                 activated_branch = self.compute_activated_branch((i, j))
-                buildingBlockShim = BuildingBlockShimYoshimora(
+                buildingBlockShim = BuildingBlockUpdatedShimYoshimora(
                     center,
                     self.radius,
                     self.length,
@@ -703,6 +774,13 @@ if __name__ == "__main__":
     yoshimora = YoshimoraTesselation(
         **pattern_settings,
         drawing=dxf.drawing("test/yoshimora_up_pattern.dxf"),
-        tape=True,
+        tape=False,
     )
     yoshimora()
+    shim = BuildingBlockUpdatedShimYoshimora(
+        **pattern_settings, drawing=dxf.drawing("test/shim.dxf")
+    )
+    shim()
+
+    shim_sheet = Shim(**pattern_settings, drawing=dxf.drawing("test/shim_sheet.dxf"))
+    shim_sheet()
