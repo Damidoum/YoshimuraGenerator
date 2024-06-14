@@ -1,5 +1,6 @@
 from typing import Any
 from dxfwrite import DXFEngine as dxf
+import math
 from utils import (
     end_point_of_line,
     normalize_vector,
@@ -7,7 +8,6 @@ from utils import (
     vector_sum,
     vector_multiply,
 )
-import math
 
 
 class Branch:
@@ -396,6 +396,25 @@ class YoshimoraTesselation:
         *args,
         **kwargs,
     ) -> None:
+        """Create a Yoshimora Tesselation
+
+        Args:
+            size (tuple[int]): size of the tesselation (number of building blocks in x and y)
+            center (tuple[float]): center of the (0,0) building block
+            radius (float): radius of the building block
+            length (float): regular length of the branch
+            angle (float): angle of the branch
+            beam_count (int): number of beam in the branch
+            panel_gap (float, optional): gap between the panels (Defaults to 1.2)
+            beam_gap (float, optional): gap between beams in a branch (Defaults to 2.33)
+            beam_length (float, optional): beam length (Defaults to 6.33, see README for more schematic)
+            beam_width (float, optional): beam width (Defaults to 4.83, see README for more schematic)
+            drawing (_type_, optional): dxf object (Defaults to dxf.drawing("yoshimura_pattern.dxf"))
+            tape (bool, optional): tape tesselation or not (Defaults to False)
+        """
+        assert (type(size) == tuple) and (
+            len(size) == 2
+        ), "Size must be a tuple of 2 integers"
         self.size = size
         self.center = center
         self.radius = radius
@@ -409,33 +428,49 @@ class YoshimoraTesselation:
         self.drawing = drawing
         self.tape = tape
 
-    def compute_activated_branch(self, pos: tuple[int]) -> list[bool]:
+    def _get_activated_branch(self, position: tuple[int]) -> list[bool]:
+        """Choose which branch to activate based on the position of the building block to avoid overlapping
+
+        Args:
+            center (tuple[int]): coordinates (index) of the building block
+
+        Returns:
+            list[bool]: list of the activated branches
+        """
         activated_branch = [True] * 6
 
         # Deactivate branches based on position
-        if pos[1] > 0:  # If pos[1] is greater than 0
+        if position[1] > 0:  # If pos[1] is greater than 0
             activated_branch[3] = False  # Deactivate branch 3
-            if pos[0] > 0:  # If pos[0] is greater than 0
+            if position[0] > 0:  # If pos[0] is greater than 0
                 activated_branch[2] = False  # Deactivate branch 2
 
         if (
-            pos[0] % 2 == 0 and pos[1] == 0 and pos[0] > 0
+            position[0] % 2 == 0 and position[1] == 0 and position[0] > 0
         ):  # Special condition for even pos[0] and pos[1] equals 0
             activated_branch[2] = False  # Deactivate branch 2
 
         if (
-            pos[1] < self.size[1] - 1 and pos[0] > 0
+            position[1] < self.size[1] - 1 and position[0] > 0
         ):  # If pos[1] is within bounds and pos[0] is greater than 0
             activated_branch[1] = False  # Deactivate branch 1
 
         if (
-            pos[1] == self.size[1] - 1 and pos[0] % 2 == 1
+            position[1] == self.size[1] - 1 and position[0] % 2 == 1
         ):  # Special condition for pos[1] at upper bound and odd pos[0]
             activated_branch[1] = False  # Deactivate branch 1
         return activated_branch
 
-    def compute_branch_position(self, pos: tuple[int]) -> tuple[float]:
-        if pos[0] % 2 == 0:
+    def _get_block_center(self, position: tuple[int]) -> tuple[float]:
+        """Compute the center of the building block based on its position
+
+        Args:
+            position (tuple[int]): coordinates (index) of the building block
+
+        Returns:
+            tuple[float]: center of the building block
+        """
+        if position[0] % 2 == 0:
             offset = end_point_of_line(
                 (0, 0), 2 * self.radius + self.length, self.angle
             )[0]
@@ -443,26 +478,24 @@ class YoshimoraTesselation:
             offset = 0
 
         vertical_mov = end_point_of_line(
-            self.center, pos[0] * (2 * self.radius + self.length), -self.angle
+            self.center, position[0] * (2 * self.radius + self.length), -self.angle
         )
         horizontal_mov = end_point_of_line(
             self.center,
-            pos[1]
+            position[1]
             * 2
             * math.cos(math.radians(self.angle))
             * (self.length + 2 * self.radius),
             0,
         )
-
         return horizontal_mov[0] + offset, vertical_mov[1]
 
-    def draw_tesselation(self) -> None:
-        assert type(self.size) == tuple, "Size must be a tuple"
-        assert len(self.size) == 2, "Size must be a tuple of length 2"
+    def _draw_tesselation(self) -> None:
+        """Draw the tesselation given the parameters"""
         for i in range(self.size[0]):
             for j in range(self.size[1]):
-                center = self.compute_branch_position((i, j))
-                activated_branch = self.compute_activated_branch((i, j))
+                center = self._get_block_center((i, j))
+                activated_branch = self._get_activated_branch((i, j))
                 yoshimora_block = BuildingBlockYoshimora(
                     center=center,
                     radius=self.radius,
@@ -480,7 +513,7 @@ class YoshimoraTesselation:
                 yoshimora_block()
 
     def __call__(self):
-        self.draw_tesselation()
+        self._draw_tesselation()
 
 
 if __name__ == "__main__":
