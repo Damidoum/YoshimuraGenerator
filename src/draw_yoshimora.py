@@ -148,7 +148,7 @@ class Branch:
                 dxf.polyline([start_point_beam, beam_point1, beam_point2, beam_point3])
             )
 
-    def draw_branch(self):
+    def _draw_branch(self):
         """Draw the branch with the given parameters"""
         length_extremity_lines = self._get_extremity_length()
         for angle in (self.angle + 90, self.angle - 90):
@@ -163,43 +163,50 @@ class Branch:
         self.drawing.save()
 
     def __call__(self):
-        return self.draw_branch()
+        return self._draw_branch()
 
 
 class BranchTape(Branch):
     def __repr__(self) -> str:
         return f"BranchTape(length = {self.length}, angle = {self.angle}, number of beam = {self.beam_count})"
 
-    def draw_branch(self, filename=None):
-        if filename is None:
-            filename = "yoshimura_branch.dxf"
-        assert type(filename) == str, "Filename must be a string"
+    def _get_beam_starting_point(self, extremity_length: float) -> tuple[float]:
+        """Compute the starting point of the beam unit of the branch with the given parameters
 
-        # Draw the branchs
-        length_extremity_lines = (
-            self.length
-            - self.beam_length * self.beam_count
-            - self.beam_gap * (self.beam_count - 1)
-        ) / 2
-        start_point_beam = end_point_of_line(
-            self.start_point, length_extremity_lines, self.angle
+        Args:
+            extremity_length (float): length of the extremity line
+
+        Returns:
+            tuple[float]: starting point of the beam unit
+        """
+        start_point = end_point_of_line(
+            self.position, self.beam_width / 2, self.angle - 90
         )
-        start_point_beam = end_point_of_line(
-            start_point_beam, self.beam_width / 2, self.angle - 90
+        return end_point_of_line(start_point, extremity_length, self.angle)
+
+    def _get_beam_points(self, start_point_beam: tuple[float]) -> tuple[tuple[float]]:
+        """Compute the points of the beam unit of the branch with the given parameters
+
+        Args:
+            start_point_beam (tuple[float]): starting point of the beam
+
+        Returns:
+            tuple[tuple[float]]: differents points of the beam unit
+        """
+        beam_point1 = end_point_of_line(
+            start_point_beam, self.beam_width, self.angle + 90
         )
-        for i in range(self.beam_count):
-            # left beam slot
-            beam_point1 = end_point_of_line(
-                start_point_beam,
-                self.beam_width,
-                self.angle + 90,
-            )
-            beam_point2 = end_point_of_line(beam_point1, self.beam_length, self.angle)
-            beam_point3 = end_point_of_line(
-                beam_point2, self.beam_width, self.angle - 90
-            )
-            beam_point4 = end_point_of_line(
-                beam_point3, self.beam_length, self.angle + 180
+        beam_point2 = end_point_of_line(beam_point1, self.beam_length, self.angle)
+        beam_point3 = end_point_of_line(beam_point2, self.beam_width, self.angle - 90)
+        beam_point4 = end_point_of_line(beam_point3, self.beam_length, self.angle + 180)
+        return beam_point1, beam_point2, beam_point3, beam_point4
+
+    def _draw_branch(self):
+        length_extremity_lines = self._get_extremity_length()
+        start_point_beam = self._get_beam_starting_point(length_extremity_lines)
+        for _ in range(self.beam_count):
+            beam_point1, beam_point2, beam_point3, beam_point4 = self._get_beam_points(
+                start_point_beam
             )
             self.drawing.add(
                 dxf.polyline(
@@ -952,12 +959,12 @@ if __name__ == "__main__":
     )
     tesselation()
 
-    # tesselationTape = YoshimoraTesselation(
-    #     **pattern_settings,
-    #     drawing=dxf.drawing("out/yoshimura_tesselation_tape.dxf"),
-    #     tape=True,
-    # )
-    # tesselationTape()
+    tesselationTape = YoshimoraTesselation(
+        **pattern_settings,
+        drawing=dxf.drawing("out/yoshimura_tesselation_tape.dxf"),
+        tape=True,
+    )
+    tesselationTape()
 
     shimTesselation = Shim(
         **pattern_settings,
