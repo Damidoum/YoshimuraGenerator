@@ -2,15 +2,140 @@ from typing import Any
 from dxfwrite import DXFEngine as dxf
 from utils import (
     end_point_of_line,
-    normalize_vector,
-    vector_difference,
-    vector_sum,
-    vector_multiply,
 )
 import math
 
 
-class CenterShim:
+class ShimBranch:
+    def __init__(
+        self,
+        position: tuple[float],
+        length: float,
+        angle: float,
+        ratio: float,
+        margin: float,
+        beam_count: int,
+        panel_gap=1.2,
+        beam_gap=2.33,
+        beam_length=6.33,
+        beam_width=4.83,
+        drawing=dxf.drawing("yoshimora_branch_shim.dxf"),
+        *args,
+        **kwargs,
+    ) -> None:
+        self.position = position
+        self.length = length
+        self.angle = angle
+        self.ratio = ratio
+        self.margin = margin
+        self.beam_count = beam_count
+        self.panel_gap = panel_gap
+        self.beam_gap = beam_gap
+        self.beam_length = beam_length
+        self.beam_width = beam_width
+        self.width = self.beam_width * 1 / self.ratio
+        self.drawing = drawing
+
+    def __repr__(self) -> str:
+        return (
+            f"ShimBranch({self.position}, {self.length}, {self.angle}, {self.margin})"
+        )
+
+    def _get_extremity_length(self) -> float:
+        """Compute the length of the extremity of the shim
+
+        Returns:
+            float: length of the extremity of the shim
+        """
+        return (
+            self.length
+            - self.beam_length * self.beam_count
+            - self.beam_gap * (self.beam_count - 1)
+            - self.margin
+        ) / 2
+
+    def _get_branch_starting_point(self) -> tuple[float]:
+        """Compute the starting point of the branch
+
+        Returns:
+            tuple[float]: starting point of the branch
+        """
+        return end_point_of_line(
+            self.position,
+            (self.width - self.beam_width + self.panel_gap) / 2,
+            self.angle - 90,
+        )
+
+    def _get_branch_points(self) -> list[tuple[float]]:
+        """Get the points of the branch with the given parameters
+
+        Returns:
+            list[tuple[float]]: branch points
+        """
+        length_extremity_lines = self._get_extremity_length()
+        start_point = self._get_branch_starting_point()
+        shim_point1 = end_point_of_line(start_point, length_extremity_lines, self.angle)
+        shim_point2 = end_point_of_line(
+            shim_point1,
+            (self.beam_width - self.panel_gap) / 2,
+            self.angle - 90,
+        )
+        shim_point3 = end_point_of_line(shim_point2, self.margin, self.angle)
+        shim_point4 = end_point_of_line(shim_point3, self.width, self.angle + 90)
+        shim_point5 = end_point_of_line(shim_point4, self.margin, self.angle + 180)
+        shim_point6 = end_point_of_line(
+            shim_point5,
+            (self.beam_width - self.panel_gap) / 2,
+            self.angle - 90,
+        )
+        end_shim = end_point_of_line(
+            shim_point6, length_extremity_lines, self.angle - 180
+        )
+        return (
+            start_point,
+            shim_point1,
+            shim_point2,
+            shim_point3,
+            shim_point4,
+            shim_point5,
+            shim_point6,
+            end_shim,
+        )
+
+    def _draw_branch(self) -> tuple[float]:
+        (
+            start_point,
+            shim_point1,
+            shim_point2,
+            shim_point3,
+            shim_point4,
+            shim_point5,
+            shim_point6,
+            end_shim,
+        ) = self._get_branch_points()
+
+        self.drawing.add(
+            dxf.polyline(
+                [
+                    start_point,
+                    shim_point1,
+                    shim_point2,
+                    shim_point3,
+                    shim_point4,
+                    shim_point5,
+                    shim_point6,
+                    end_shim,
+                ]
+            )
+        )
+        self.drawing.save()
+        return end_shim
+
+    def __call__(self) -> tuple[float]:
+        return self._draw_branch()
+
+
+class ShimCenterPart:
     def __init__(
         self,
         center: tuple[float],
@@ -26,7 +151,9 @@ class CenterShim:
         beam_length=6.33,
         beam_width=4.33,
         drawing=dxf.drawing("yoshimora_shim.dxf"),
-    ):
+        *args,
+        **kwargs,
+    ) -> None:
         self.center = center
         self.radius = radius
         self.length = length
@@ -40,103 +167,100 @@ class CenterShim:
         self.beam_length = beam_length
         self.beam_width = beam_width
         self.drawing = drawing
+        self.angles = [
+            0,
+            self.angle,
+            180 - self.angle,
+            180,
+            180 + self.angle,
+            -self.angle,
+        ]
+        self.width = self.beam_width * 1 / self.ratio
 
-    def compute_branch_position(self) -> list[tuple[float]]:
+    def _get_branch_position(self) -> list[tuple[float]]:
+        """Compute the position of the branches of the shim
+
+        Returns:
+            list[tuple[float]]: _description_
+        """
         branch_positions = []
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
-        for i, angle in enumerate(angles):
+        for i, angle in enumerate(self.angles):
             point = end_point_of_line(self.center, self.radius, angle)
             for j in range(i):
                 if j == 0:
                     point = end_point_of_line(
                         point,
                         (self.beam_width * 1 / self.ratio - self.beam_width) / 2,
-                        angles[j] + 90,
+                        self.angles[j] + 90,
                     )
                 else:
                     point = end_point_of_line(
                         point,
                         self.beam_width * 1 / self.ratio - self.beam_width,
-                        angles[j] + 90,
+                        self.angles[j] + 90,
                     )
+            if i != 0:
+                point = end_point_of_line(
+                    point,
+                    self.panel_gap / 2
+                    - (self.width - self.beam_width + self.panel_gap) / 2,
+                    self.angles[i] - 90,
+                )
             branch_positions.append(point)
         return branch_positions
 
-    def draw_shim(self):
-        width = self.beam_width * 1 / self.ratio
-        length_extremity_lines = (
-            self.length
-            - self.beam_length * self.beam_count
-            - self.beam_gap * (self.beam_count - 1)
-            - self.margin
-        ) / 2
+    def _get_branch_length(self, idx: int) -> float:
+        """Compute the length of the branch at the given index
 
-        branch_position = self.compute_branch_position()
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
+        Args:
+            idx (int): index of the branch
+
+        Returns:
+            float: length of the branch
+        """
+        if idx == 0 or idx == 3:
+            return (
+                2 * math.cos(math.radians(self.angle)) * (self.length + 2 * self.radius)
+            ) - 2 * self.radius
+        else:
+            return self.length
+
+    def _draw_shim(self):
+        branch_position = self._get_branch_position()
         for i, branch_state in enumerate(self.activated_branch):
             if branch_state:
-                if i == 0:
-                    start_point = end_point_of_line(
-                        branch_position[i],
-                        (width - self.beam_width + self.panel_gap) / 2,
-                        angles[i] - 90,
-                    )
-                else:
-                    start_point = end_point_of_line(
-                        branch_position[i],
-                        self.panel_gap / 2,
-                        angles[i] - 90,
-                    )
+                length = self._get_branch_length(i)
+                branch = ShimBranch(
+                    branch_position[i],
+                    length,
+                    self.angles[i],
+                    self.ratio,
+                    self.margin,
+                    self.beam_count,
+                    self.panel_gap,
+                    self.beam_gap,
+                    self.beam_length,
+                    self.beam_width,
+                    self.drawing,
+                )
+                start_point = branch._get_branch_starting_point()
+                if i != 0:
                     self.drawing.add(dxf.line(start_point, end_shim))
-                shim_point1 = end_point_of_line(
-                    start_point, length_extremity_lines, angles[i]
-                )
-                shim_point2 = end_point_of_line(
-                    shim_point1,
-                    (self.beam_width - self.panel_gap) / 2,
-                    angles[i] - 90,
-                )
-                shim_point3 = end_point_of_line(shim_point2, self.margin, angles[i])
-                shim_point4 = end_point_of_line(shim_point3, width, angles[i] + 90)
-                shim_point5 = end_point_of_line(
-                    shim_point4, self.margin, angles[i] + 180
-                )
-                shim_point6 = end_point_of_line(
-                    shim_point5,
-                    (self.beam_width - self.panel_gap) / 2,
-                    angles[i] - 90,
-                )
-                end_shim = end_point_of_line(
-                    shim_point6, length_extremity_lines, angles[i] - 180
-                )
-                self.drawing.add(
-                    dxf.polyline(
-                        [
-                            start_point,
-                            shim_point1,
-                            shim_point2,
-                            shim_point3,
-                            shim_point4,
-                            shim_point5,
-                            shim_point6,
-                            end_shim,
-                        ]
-                    )
-                )
+                end_shim = branch()  # draw the branch and get the end point
         self.drawing.add(
             dxf.line(
                 end_shim,
                 end_point_of_line(
                     branch_position[0],
-                    (width - self.beam_width + self.panel_gap) / 2,
-                    angles[0] - 90,
+                    (self.width - self.beam_width + self.panel_gap) / 2,
+                    self.angles[0] - 90,
                 ),
             )
-        )
+        )  # draw the last join between the branches
         self.drawing.save()
 
     def __call__(self):
-        self.draw_shim()
+        self._draw_shim()
 
 
 class ShimSep:
@@ -254,7 +378,7 @@ class BuildingBlockShimYoshimora:
         offset = (self.length - 2 * length_extremity_lines - 2 * self.margin) / (
             self.beam_count
         )
-        center_shim = CenterShim(
+        center_shim = ShimCenterPart(
             self.center,
             self.radius,
             self.length,
@@ -270,7 +394,7 @@ class BuildingBlockShimYoshimora:
             self.drawing,
         )
         center_shim()
-        branch_position = center_shim.compute_branch_position()
+        branch_position = center_shim._get_branch_position()
         width = self.beam_width * 1 / self.ratio
         for i, branch_state in enumerate(self.activated_branch):
             for count in range(self.beam_count - 1):
@@ -511,7 +635,7 @@ if __name__ == "__main__":
         "ratio": 0.88,
         "radius": 2 * scaling,
         "length": 25 * scaling,
-        "angle": 60,
+        "angle": 45,
         "beam_count": 2,
         "panel_gap": 1.2,
         "beam_gap": 2.33 * scaling,
@@ -520,6 +644,11 @@ if __name__ == "__main__":
         "margin": 0.67 * scaling,
         "position": (0, 0),
     }
+
+    shimCenterPart = ShimCenterPart(
+        **pattern_settings, drawing=dxf.drawing("test/shim_center_part.dxf")
+    )
+    shimCenterPart()
     shimTesselation = Shim(
         **pattern_settings,
         drawing=dxf.drawing("out/shim_tesselation.dxf"),
