@@ -266,7 +266,7 @@ class ShimCenterPart:
 class ShimSep:
     def __init__(
         self,
-        position: tuple[float],
+        center: tuple[float],
         angle: float,
         ratio: float,
         margin: float,
@@ -275,8 +275,10 @@ class ShimSep:
         beam_length=6.33,
         beam_width=4.33,
         drawing=dxf.drawing("yoshimora_shim.dxf"),
+        *args,
+        **kwargs,
     ):
-        self.position = position
+        self.center = center
         self.angle = angle
         self.ratio = ratio
         self.margin = margin
@@ -285,11 +287,18 @@ class ShimSep:
         self.beam_length = beam_length
         self.beam_width = beam_width
         self.drawing = drawing
+        self.width = self.beam_width * 1 / self.ratio
 
-    def draw_shim_seperator(self):
-        width = self.beam_width * 1 / self.ratio
-        start_point = end_point_of_line(self.position, width / 2, self.angle - 90)
-        point1 = end_point_of_line(start_point, width, self.angle + 90)
+    def _get_seperator_points(self) -> list[tuple[float]]:
+        """Get the points of the shim seperator
+
+        Returns:
+            list[tuple[float]]: points of the shim seperator
+        """
+        start_point = end_point_of_line(
+            self.center, (self.beam_gap + self.margin) / 2, self.angle + 180
+        )
+        point1 = end_point_of_line(start_point, self.width / 2, self.angle + 90)
         point2 = end_point_of_line(point1, self.margin, self.angle)
         point3 = end_point_of_line(
             point2, (self.beam_width - self.panel_gap) / 2, self.angle - 90
@@ -299,7 +308,7 @@ class ShimSep:
             point4, (self.beam_width - self.panel_gap) / 2, self.angle + 90
         )
         point6 = end_point_of_line(point5, self.margin, self.angle)
-        point7 = end_point_of_line(point6, width, self.angle - 90)
+        point7 = end_point_of_line(point6, self.width, self.angle - 90)
         point8 = end_point_of_line(point7, self.margin, self.angle + 180)
         point9 = end_point_of_line(
             point8, (self.beam_width - self.panel_gap) / 2, self.angle + 90
@@ -311,29 +320,31 @@ class ShimSep:
             point10, (self.beam_width - self.panel_gap) / 2, self.angle - 90
         )
         point12 = end_point_of_line(point11, self.margin, self.angle + 180)
-        self.drawing.add(
-            dxf.polyline(
-                [
-                    point1,
-                    point2,
-                    point3,
-                    point4,
-                    point5,
-                    point6,
-                    point7,
-                    point8,
-                    point9,
-                    point10,
-                    point11,
-                    point12,
-                    point1,
-                ]
-            )
-        )
+        return [
+            start_point,
+            point1,
+            point2,
+            point3,
+            point4,
+            point5,
+            point6,
+            point7,
+            point8,
+            point9,
+            point10,
+            point11,
+            point12,
+        ]
+
+    def _draw_shim_seperator(self) -> None:
+        """Draw the shim seperator"""
+        points = self._get_seperator_points()[1:]
+        points.append(points[0])  # close the loop
+        self.drawing.add(dxf.polyline(points))
         self.drawing.save()
 
     def __call__(self):
-        self.draw_shim_seperator()
+        self._draw_shim_seperator()
 
 
 class BuildingBlockShimYoshimora:
@@ -649,8 +660,13 @@ if __name__ == "__main__":
         **pattern_settings, drawing=dxf.drawing("test/shim_center_part.dxf")
     )
     shimCenterPart()
-    shimTesselation = Shim(
-        **pattern_settings,
-        drawing=dxf.drawing("out/shim_tesselation.dxf"),
-    )
-    shimTesselation()
+
+    shimSep = ShimSep(**pattern_settings, drawing=dxf.drawing("test/shim_sep.dxf"))
+    shimSep.drawing.save()
+    shimSep()
+
+    # shimTesselation = Shim(
+    #     **pattern_settings,
+    #     drawing=dxf.drawing("out/shim_tesselation.dxf"),
+    # )
+    # shimTesselation()
