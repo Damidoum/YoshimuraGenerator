@@ -389,6 +389,38 @@ class BuildingBlockShimYoshimora:
         ]
         self.width = self.beam_width * 1 / self.ratio
 
+    def _get_branch_position(self) -> list[tuple[float]]:
+        """Compute the position of the branches of the shim
+
+        Returns:
+            list[tuple[float]]: _description_
+        """
+        branch_positions = []
+        for i, angle in enumerate(self.angles):
+            point = end_point_of_line(self.center, self.radius, angle)
+            for j in range(i):
+                if j == 0:
+                    point = end_point_of_line(
+                        point,
+                        (self.beam_width * 1 / self.ratio - self.beam_width) / 2,
+                        self.angles[j] + 90,
+                    )
+                else:
+                    point = end_point_of_line(
+                        point,
+                        self.beam_width * 1 / self.ratio - self.beam_width,
+                        self.angles[j] + 90,
+                    )
+            if i != 0:
+                point = end_point_of_line(
+                    point,
+                    self.panel_gap / 2
+                    - (self.width - self.beam_width + self.panel_gap) / 2,
+                    self.angles[i] - 90,
+                )
+            branch_positions.append(point)
+        return branch_positions
+
     def _get_offset_length(self, length) -> float:
         """Compute the offset length of the shim
 
@@ -485,11 +517,11 @@ class BuildingBlockShimYoshimora:
         self._draw_shim()
 
 
-class Shim:
+class ShimTesselation:
     def __init__(
         self,
         size: tuple[int],
-        position: tuple[float],
+        center: tuple[float],
         radius: float,
         length: float,
         angle: float,
@@ -505,7 +537,7 @@ class Shim:
         **kwargs,
     ) -> None:
         self.size = size
-        self.position = position
+        self.center = center
         self.radius = radius
         self.length = length
         self.angle = angle
@@ -517,70 +549,8 @@ class Shim:
         self.beam_length = beam_length
         self.beam_width = beam_width
         self.drawing = drawing
-
-    def compute_branch_position(self, center) -> list[tuple[float]]:
-        branch_positions = []
-        width = self.beam_width * 1 / self.ratio
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
-        for i, angle in enumerate(angles):
-            point = end_point_of_line(center, self.radius, angle)
-            for j in range(i):
-                if j == 0:
-                    point = end_point_of_line(
-                        point,
-                        (self.beam_width * 1 / self.ratio - self.beam_width) / 2,
-                        angles[j] + 90,
-                    )
-                else:
-                    point = end_point_of_line(
-                        point,
-                        self.beam_width * 1 / self.ratio - self.beam_width,
-                        angles[j] + 90,
-                    )
-            if i == 0:
-                point = end_point_of_line(
-                    point,
-                    (width - self.beam_width + self.panel_gap) / 2,
-                    angles[i] - 90,
-                )
-            else:
-                point = end_point_of_line(point, self.panel_gap / 2, angles[i] - 90)
-            point = end_point_of_line(
-                point, (width - self.beam_width + self.panel_gap) / 2, angles[i] + 90
-            )
-            branch_positions.append(point)
-        return branch_positions
-
-    def compute_activated_branch(self, pos: tuple[int]) -> list[bool]:
-        activated_branch = [True] * 6
-
-        # Deactivate branches based on position
-        if pos[1] > 0:  # If pos[1] is greater than 0
-            activated_branch[3] = False  # Deactivate branch 3
-            if pos[0] > 0:  # If pos[0] is greater than 0
-                activated_branch[2] = False  # Deactivate branch 2
-
-        if (
-            pos[0] % 2 == 0 and pos[1] == 0 and pos[0] > 0
-        ):  # Special condition for even pos[0] and pos[1] equals 0
-            activated_branch[2] = False  # Deactivate branch 2
-
-        if (
-            pos[1] < self.size[1] - 1 and pos[0] > 0
-        ):  # If pos[1] is within bounds and pos[0] is greater than 0
-            activated_branch[1] = False  # Deactivate branch 1
-
-        if (
-            pos[1] == self.size[1] - 1 and pos[0] % 2 == 1
-        ):  # Special condition for pos[1] at upper bound and odd pos[0]
-            activated_branch[1] = False  # Deactivate branch 1
-        return activated_branch
-
-    def get_center_position(
-        self, branch_number: int, branch_position: tuple[float]
-    ) -> tuple[float]:
-        width = self.beam_width * 1 / self.ratio
-        angles = [
+        self.width = self.beam_width * 1 / self.ratio
+        self.angles = [
             0,
             self.angle,
             180 - self.angle,
@@ -588,90 +558,151 @@ class Shim:
             180 + self.angle,
             -self.angle,
         ]
-        point = branch_position
+
+    def _compute_activated_branch(self, position: tuple[int]) -> list[bool]:
+        activated_branch = [True] * 6
+
+        # Deactivate branches based on position
+        if position[1] > 0:  # If pos[1] is greater than 0
+            activated_branch[3] = False  # Deactivate branch 3
+            if position[0] > 0:  # If pos[0] is greater than 0
+                activated_branch[2] = False  # Deactivate branch 2
+
+        if (
+            position[0] % 2 == 0 and position[1] == 0 and position[0] > 0
+        ):  # Special condition for even pos[0] and pos[1] equals 0
+            activated_branch[2] = False  # Deactivate branch 2
+
+        if (
+            position[1] < self.size[1] - 1 and position[0] > 0
+        ):  # If pos[1] is within bounds and pos[0] is greater than 0
+            activated_branch[1] = False  # Deactivate branch 1
+
+        if (
+            position[1] == self.size[1] - 1 and position[0] % 2 == 1
+        ):  # Special condition for pos[1] at upper bound and odd pos[0]
+            activated_branch[1] = False  # Deactivate branch 1
+        return activated_branch
+
+    def _get_center_position(
+        self, branch_number: int, branch_position: tuple[float]
+    ) -> tuple[float]:
         point = end_point_of_line(
-            point,
-            (width - self.beam_width + self.panel_gap) / 2,
-            angles[branch_number] - 90,
+            branch_position,
+            (self.width - self.beam_width + self.panel_gap) / 2,
+            self.angles[branch_number] - 90,
         )
         if branch_position == 0:
             point = end_point_of_line(
                 point,
-                (width - self.beam_width + self.panel_gap) / 2,
-                angles[branch_number] + 90,
+                (self.width - self.beam_width + self.panel_gap) / 2,
+                self.angles[branch_number] + 90,
             )
         else:
             point = end_point_of_line(
                 point,
                 self.panel_gap / 2,
-                angles[branch_number] + 90,
+                self.angles[branch_number] + 90,
             )
         for i in list(range(0, branch_number))[::-1]:
             if i == 0:
                 point = end_point_of_line(
                     point,
                     (self.beam_width * 1 / self.ratio - self.beam_width) / 2,
-                    angles[i] + 270,
+                    self.angles[i] + 270,
                 )
             else:
                 point = end_point_of_line(
                     point,
                     self.beam_width * 1 / self.ratio - self.beam_width,
-                    angles[i] + 270,
+                    self.angles[i] + 270,
                 )
-        point = end_point_of_line(point, self.radius, angles[branch_number] + 180)
+        point = end_point_of_line(point, self.radius, self.angles[branch_number] + 180)
         return point
 
-    def compute_block_position(self, pos: tuple[int]) -> tuple[float]:
-        center = self.position
-        block_position = end_point_of_line(center, self.radius, 0)
-        for i in range(pos[0]):
-            branch_position = self.compute_branch_position(center)
-            if i % 2 == 0:
-                block_position = branch_position[-2]
-                block_position = end_point_of_line(
-                    block_position, self.length, self.angle + 180
-                )
-                center = self.get_center_position(1, block_position)
-            else:
-                block_position = branch_position[-1]
-                block_position = end_point_of_line(
-                    block_position, self.length, -self.angle
-                )
-                center = self.get_center_position(2, block_position)
+    def _get_new_ref_block(
+        self, row_idx: int, old_ref_block: BuildingBlockShimYoshimora
+    ) -> tuple[float]:
+        if row_idx % 2 == 0:
+            branch_position = old_ref_block._get_branch_position()[4]
+            new_branch_position = end_point_of_line(
+                branch_position,
+                old_ref_block._get_branch_length(4),
+                old_ref_block.angles[4],
+            )
+            center = self._get_center_position(1, new_branch_position)
+        else:
+            branch_position = old_ref_block._get_branch_position()[5]
+            new_branch_position = end_point_of_line(
+                branch_position,
+                old_ref_block._get_branch_length(5),
+                old_ref_block.angles[5],
+            )
+            center = self._get_center_position(2, new_branch_position)
 
-        for _ in range(pos[1]):
-            block_position = end_point_of_line(center, self.radius, 0)
-            block_position = end_point_of_line(block_position, self.length, 0)
-            center = self.get_center_position(3, block_position)
-            block_position = end_point_of_line(center, self.radius, 0)
-        return [center, block_position]
+        new_ref = BuildingBlockShimYoshimora(
+            center,
+            self.radius,
+            self.length,
+            self.angle,
+            self.ratio,
+            self.margin,
+            self.beam_count,
+            self.panel_gap,
+            self.beam_gap,
+            self._compute_activated_branch((row_idx, 0)),
+            self.beam_length,
+            self.beam_width,
+            self.drawing,
+        )
+        return new_ref
 
-    def draw_shim_sheet(self) -> None:
-        center = self.position
+    def _draw_row(self, row_idx: int, center: tuple[float], size: int):
+        for j in range(size):
+            activated_branch = self._compute_activated_branch((row_idx, j))
+            buildingBlockShim = BuildingBlockShimYoshimora(
+                center,
+                self.radius,
+                self.length,
+                self.angle,
+                self.ratio,
+                self.margin,
+                self.beam_count,
+                self.panel_gap,
+                self.beam_gap,
+                activated_branch,
+                self.beam_length,
+                self.beam_width,
+                self.drawing,
+            )
+            buildingBlockShim()
+            center = end_point_of_line(
+                center, buildingBlockShim._get_branch_length(0) + self.radius, 0
+            )
+            center = self._get_center_position(3, center)
+
+    def _draw_shim_sheet(self) -> None:
+        ref_block = BuildingBlockShimYoshimora(
+            self.center,
+            self.radius,
+            self.length,
+            self.angle,
+            self.ratio,
+            self.margin,
+            self.beam_count,
+            self.panel_gap,
+            self.beam_gap,
+            [True for _ in range(6)],
+            self.beam_length,
+            self.beam_width,
+            self.drawing,
+        )
         for i in range(self.size[0]):
-            for j in range(self.size[1]):
-                center, branch_position = self.compute_block_position((i, j))
-                activated_branch = self.compute_activated_branch((i, j))
-                buildingBlockShim = BuildingBlockShimYoshimora(
-                    center,
-                    self.radius,
-                    self.length,
-                    self.angle,
-                    self.ratio,
-                    self.margin,
-                    self.beam_count,
-                    self.panel_gap,
-                    self.beam_gap,
-                    activated_branch,
-                    self.beam_length,
-                    self.beam_width,
-                    self.drawing,
-                )
-                buildingBlockShim()
+            self._draw_row(i, ref_block.center, self.size[1])
+            ref_block = self._get_new_ref_block(i + 1, ref_block)
 
     def __call__(self) -> None:
-        self.draw_shim_sheet()
+        self._draw_shim_sheet()
 
 
 if __name__ == "__main__":
@@ -680,9 +711,9 @@ if __name__ == "__main__":
         "size": (3, 3),
         "center": (0, 0),
         "ratio": 0.88,
-        "radius": 2 * scaling,
-        "length": 28 * scaling,
-        "angle": 50,
+        "radius": 2.5 * scaling,
+        "length": 27 * scaling,
+        "angle": 40,
         "beam_count": 2,
         "panel_gap": 1.2,
         "beam_gap": 2.33 * scaling,
@@ -706,8 +737,8 @@ if __name__ == "__main__":
     )
     shimBuildingBlock()
 
-    shimTesselation = Shim(
+    shimTesselation = ShimTesselation(
         **pattern_settings,
-        drawing=dxf.drawing("test/shim_tesselation.dxf"),
+        drawing=dxf.drawing("out/shim_tesselation.dxf"),
     )
     shimTesselation()
