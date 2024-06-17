@@ -11,7 +11,7 @@ from utils import (
 from yoshimora_miura_plastic import Branch, BranchTape
 
 
-class BuildingBlockYoshimora:
+class BuildingBlockUpdatedYoshimora:
     def __init__(
         self,
         center: tuple[float],
@@ -19,13 +19,15 @@ class BuildingBlockYoshimora:
         length: float,
         angle: float,
         beam_count: int,
-        activated_branch=[True for _ in range(6)],
+        activated_branch=[True for _ in range(8)],
         panel_gap=1.2,
         beam_gap=2.33,
         beam_length=6.33,
         beam_width=4.83,
         drawing=dxf.drawing("yoshimura_pattern.dxf"),
         tape=False,
+        *args,
+        **kwargs,
     ) -> None:
         self.center = center
         self.radius = radius
@@ -42,9 +44,11 @@ class BuildingBlockYoshimora:
         self.angles = [
             0,
             self.angle,
+            90,
             180 - self.angle,
             180,
             180 + self.angle,
+            -90,
             -self.angle,
         ]
 
@@ -59,15 +63,22 @@ class BuildingBlockYoshimora:
             branch_positions.append(end_point_of_line(self.center, self.radius, angle))
         return branch_positions
 
-    def _get_horizontal_branch_length(self) -> float:
+    def _get_branch_length(self, idx: int) -> float:
         """Compute the length of the horizontal branch of the building block
 
         Returns:
             float: length of the horizontal branch
         """
-        return (
-            2 * math.cos(math.radians(self.angle)) * (self.length + 2 * self.radius)
-        ) - 2 * self.radius
+        if idx == 0 or idx == 4:
+            return (
+                math.cos(math.radians(self.angle)) * (self.length + 2 * self.radius)
+            ) - self.radius
+        elif idx == 2 or idx == 6:
+            return (
+                math.sin(math.radians(self.angle)) * (self.length + 2 * self.radius)
+            ) - self.radius
+        else:
+            return self.length
 
     def _create_branch(
         self, position: tuple[float], length: float, angle: float
@@ -146,10 +157,7 @@ class BuildingBlockYoshimora:
         for i, branch_state in enumerate(self.activated_branch):
             if branch_state:  # branch is activated
                 # adapt the length of the branch for the tesselation
-                if i == 0 or i == 3:
-                    length = self._get_horizontal_branch_length()
-                else:
-                    length = self.length
+                length = self._get_branch_length(i)
                 branch = self._create_branch(
                     branch_positions[i], length, self.angles[i]
                 )  # create the i-th branch
@@ -160,11 +168,15 @@ class BuildingBlockYoshimora:
                     branch_positions[i], self.angles[i]
                 )  # draw the center support
 
+        if self.tape:
+            self.drawing.add(dxf.circle(self.radius, self.center))
+            self.drawing.save()
+
     def __call__(self) -> None:
         self._draw_building_block()
 
 
-class YoshimoraTesselation:
+class YoshimoraUpdatedTesselation:
     def __init__(
         self,
         size: tuple[int],
@@ -223,18 +235,18 @@ class YoshimoraTesselation:
         Returns:
             list[bool]: list of the activated branches
         """
-        activated_branch = [True] * 6
+        activated_branch = [True] * 8
 
         # Deactivate branches based on position
-        if position[1] > 0:  # If pos[1] is greater than 0
+        if (
+            position[1] > 0 and position[0] > 0
+        ):  # If pos[1] is greater than 0 and pos[0] is greater than 0
             activated_branch[3] = False  # Deactivate branch 3
-            if position[0] > 0:  # If pos[0] is greater than 0
-                activated_branch[2] = False  # Deactivate branch 2
 
         if (
             position[0] % 2 == 0 and position[1] == 0 and position[0] > 0
         ):  # Special condition for even pos[0] and pos[1] equals 0
-            activated_branch[2] = False  # Deactivate branch 2
+            activated_branch[3] = False  # Deactivate branch 3
 
         if (
             position[1] < self.size[1] - 1 and position[0] > 0
@@ -245,6 +257,10 @@ class YoshimoraTesselation:
             position[1] == self.size[1] - 1 and position[0] % 2 == 1
         ):  # Special condition for pos[1] at upper bound and odd pos[0]
             activated_branch[1] = False  # Deactivate branch 1
+
+        if position[0] % 2 == 0:
+            activated_branch[0] = False
+            activated_branch[4] = False
         return activated_branch
 
     def _get_block_center(self, position: tuple[int]) -> tuple[float]:
@@ -282,7 +298,7 @@ class YoshimoraTesselation:
             for j in range(self.size[1]):
                 center = self._get_block_center((i, j))
                 activated_branch = self._get_activated_branch((i, j))
-                yoshimora_block = BuildingBlockYoshimora(
+                yoshimora_block = BuildingBlockUpdatedYoshimora(
                     center=center,
                     radius=self.radius,
                     length=self.length,
@@ -303,9 +319,9 @@ class YoshimoraTesselation:
 
 
 if __name__ == "__main__":
-    scaling = 1
+    scaling = 1.5
     pattern_settings = {
-        "size": (3, 3),
+        "size": (7, 7),
         "center": (0, 0),
         "ratio": 0.88,
         "radius": 2.5 * scaling,
@@ -319,15 +335,15 @@ if __name__ == "__main__":
         "margin": 0.67 * scaling,
         "position": (0, 0),
     }
-    tesselation = YoshimoraTesselation(
-        **pattern_settings,
-        drawing=dxf.drawing("out/yoshimura_tesselation.dxf"),
-    )
-    tesselation()
 
-    tesselationTape = YoshimoraTesselation(
-        **pattern_settings,
-        drawing=dxf.drawing("out/yoshimura_tesselation_tape.dxf"),
-        tape=True,
+    yoshimora_block = BuildingBlockUpdatedYoshimora(
+        **pattern_settings, drawing=dxf.drawing("test/yoshimura_updated_pattern.dxf")
     )
-    tesselationTape()
+    yoshimora_block()
+
+    yoshimora_tesselation = YoshimoraUpdatedTesselation(
+        **pattern_settings,
+        tape=True,
+        drawing=dxf.drawing("test/yoshimura_updated_tesselation_tape.dxf"),
+    )
+    yoshimora_tesselation()
