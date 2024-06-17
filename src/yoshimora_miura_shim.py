@@ -363,6 +363,8 @@ class BuildingBlockShimYoshimora:
         beam_length=6.33,
         beam_width=4.33,
         drawing=dxf.drawing("yoshimora_shim.dxf"),
+        *args,
+        **kwargs,
     ) -> None:
         self.center = center
         self.radius = radius
@@ -377,18 +379,69 @@ class BuildingBlockShimYoshimora:
         self.beam_length = beam_length
         self.beam_width = beam_width
         self.drawing = drawing
+        self.angles = [
+            0,
+            self.angle,
+            180 - self.angle,
+            180,
+            180 + self.angle,
+            -self.angle,
+        ]
+        self.width = self.beam_width * 1 / self.ratio
 
-    def draw_shim(self) -> None:
-        angles = [0, self.angle, 180 - self.angle, 180, 180 + self.angle, -self.angle]
-        length_extremity_lines = (
-            self.length
-            - self.beam_length * self.beam_count
-            - self.beam_gap * (self.beam_count - 1)
-            - self.margin
-        ) / 2
-        offset = (self.length - 2 * length_extremity_lines - 2 * self.margin) / (
-            self.beam_count
+    def _get_offset_length(self, length) -> float:
+        """Compute the offset length of the shim
+
+        Returns:
+            float: offset length of the shim
+        """
+        return (
+            (
+                length
+                - self.beam_length * self.beam_count
+                - self.beam_gap * (self.beam_count - 1)
+            )
+            / 2
+            + self.beam_length
+            + self.beam_gap / 2
         )
+
+    def _get_branch_length(self, idx: int) -> float:
+        """Compute the length of the branch at the given index
+
+        Args:
+            idx (int): index of the branch
+
+        Returns:
+            float: length of the branch
+        """
+        if idx == 0 or idx == 3:
+            return (
+                2 * math.cos(math.radians(self.angle)) * (self.length + 2 * self.radius)
+            ) - 2 * self.radius
+        else:
+            return self.length
+
+    def _get_seperator_center(
+        self, idx: int, count: int, offset: float, branch_position: tuple[float]
+    ) -> tuple[float]:
+        """Compute the center of the shim seperator
+
+        Args:
+            count (int): count of the beam
+            offset (float): offset of the shim
+            branch_position (tuple[float]): position of the branch
+
+        Returns:
+            tuple[float]: center of the shim seperator
+        """
+        return end_point_of_line(
+            branch_position,
+            offset + count * (self.beam_gap + self.beam_length),
+            self.angles[idx],
+        )
+
+    def _draw_shim(self) -> None:
         center_shim = ShimCenterPart(
             self.center,
             self.radius,
@@ -404,37 +457,20 @@ class BuildingBlockShimYoshimora:
             self.beam_width,
             self.drawing,
         )
-        center_shim()
+        center_shim()  # draw the center part of the shim
         branch_position = center_shim._get_branch_position()
-        width = self.beam_width * 1 / self.ratio
         for i, branch_state in enumerate(self.activated_branch):
+            length = self._get_branch_length(i)
+            offset = self._get_offset_length(length)
             for count in range(self.beam_count - 1):
                 if not branch_state:
                     continue
-                if i == 0:
-                    position = branch_position[i]
-                else:
-                    position = end_point_of_line(
-                        branch_position[i],
-                        self.panel_gap / 2,
-                        angles[i] - 90,
-                    )
-                    position = end_point_of_line(
-                        position,
-                        (width - self.beam_width + self.panel_gap) / 2,
-                        angles[i] + 90,
-                    )
-                position = end_point_of_line(
-                    position,
-                    length_extremity_lines
-                    + self.margin
-                    + offset * (count + 1)
-                    - (self.margin + self.beam_gap) / 2,
-                    angles[i],
+                center_sep = self._get_seperator_center(
+                    i, count, offset, branch_position[i]
                 )
                 shim_sep = ShimSep(
-                    position,
-                    angles[i],
+                    center_sep,
+                    self.angles[i],
                     self.ratio,
                     self.margin,
                     self.panel_gap,
@@ -446,7 +482,7 @@ class BuildingBlockShimYoshimora:
                 shim_sep()
 
     def __call__(self):
-        self.draw_shim()
+        self._draw_shim()
 
 
 class Shim:
@@ -645,8 +681,8 @@ if __name__ == "__main__":
         "center": (0, 0),
         "ratio": 0.88,
         "radius": 2 * scaling,
-        "length": 25 * scaling,
-        "angle": 45,
+        "length": 28 * scaling,
+        "angle": 50,
         "beam_count": 2,
         "panel_gap": 1.2,
         "beam_gap": 2.33 * scaling,
@@ -665,8 +701,13 @@ if __name__ == "__main__":
     shimSep.drawing.save()
     shimSep()
 
-    # shimTesselation = Shim(
-    #     **pattern_settings,
-    #     drawing=dxf.drawing("out/shim_tesselation.dxf"),
-    # )
-    # shimTesselation()
+    shimBuildingBlock = BuildingBlockShimYoshimora(
+        **pattern_settings, drawing=dxf.drawing("test/shim_building_block.dxf")
+    )
+    shimBuildingBlock()
+
+    shimTesselation = Shim(
+        **pattern_settings,
+        drawing=dxf.drawing("test/shim_tesselation.dxf"),
+    )
+    shimTesselation()
