@@ -4,135 +4,7 @@ from utils import (
     end_point_of_line,
 )
 import math
-
-
-class ShimBranch:
-    def __init__(
-        self,
-        position: tuple[float],
-        length: float,
-        angle: float,
-        ratio: float,
-        margin: float,
-        beam_count: int,
-        panel_gap=1.2,
-        beam_gap=2.33,
-        beam_length=6.33,
-        beam_width=4.83,
-        drawing=dxf.drawing("yoshimora_branch_shim.dxf"),
-        *args,
-        **kwargs,
-    ) -> None:
-        self.position = position
-        self.length = length
-        self.angle = angle
-        self.ratio = ratio
-        self.margin = margin
-        self.beam_count = beam_count
-        self.panel_gap = panel_gap
-        self.beam_gap = beam_gap
-        self.beam_length = beam_length
-        self.beam_width = beam_width
-        self.width = self.beam_width * 1 / self.ratio
-        self.drawing = drawing
-
-    def __repr__(self) -> str:
-        return (
-            f"ShimBranch({self.position}, {self.length}, {self.angle}, {self.margin})"
-        )
-
-    def _get_extremity_length(self) -> float:
-        """Compute the length of the extremity of the shim
-
-        Returns:
-            float: length of the extremity of the shim
-        """
-        return (
-            self.length
-            - self.beam_length * self.beam_count
-            - self.beam_gap * (self.beam_count - 1)
-            - self.margin
-        ) / 2
-
-    def _get_branch_starting_point(self) -> tuple[float]:
-        """Compute the starting point of the branch
-
-        Returns:
-            tuple[float]: starting point of the branch
-        """
-        return end_point_of_line(
-            self.position,
-            (self.width - self.beam_width + self.panel_gap) / 2,
-            self.angle - 90,
-        )
-
-    def _get_branch_points(self) -> list[tuple[float]]:
-        """Get the points of the branch with the given parameters
-
-        Returns:
-            list[tuple[float]]: branch points
-        """
-        length_extremity_lines = self._get_extremity_length()
-        start_point = self._get_branch_starting_point()
-        shim_point1 = end_point_of_line(start_point, length_extremity_lines, self.angle)
-        shim_point2 = end_point_of_line(
-            shim_point1,
-            (self.beam_width - self.panel_gap) / 2,
-            self.angle - 90,
-        )
-        shim_point3 = end_point_of_line(shim_point2, self.margin, self.angle)
-        shim_point4 = end_point_of_line(shim_point3, self.width, self.angle + 90)
-        shim_point5 = end_point_of_line(shim_point4, self.margin, self.angle + 180)
-        shim_point6 = end_point_of_line(
-            shim_point5,
-            (self.beam_width - self.panel_gap) / 2,
-            self.angle - 90,
-        )
-        end_shim = end_point_of_line(
-            shim_point6, length_extremity_lines, self.angle - 180
-        )
-        return (
-            start_point,
-            shim_point1,
-            shim_point2,
-            shim_point3,
-            shim_point4,
-            shim_point5,
-            shim_point6,
-            end_shim,
-        )
-
-    def _draw_branch(self) -> tuple[float]:
-        (
-            start_point,
-            shim_point1,
-            shim_point2,
-            shim_point3,
-            shim_point4,
-            shim_point5,
-            shim_point6,
-            end_shim,
-        ) = self._get_branch_points()
-
-        self.drawing.add(
-            dxf.polyline(
-                [
-                    start_point,
-                    shim_point1,
-                    shim_point2,
-                    shim_point3,
-                    shim_point4,
-                    shim_point5,
-                    shim_point6,
-                    end_shim,
-                ]
-            )
-        )
-        self.drawing.save()
-        return end_shim
-
-    def __call__(self) -> tuple[float]:
-        return self._draw_branch()
+from yoshimora_miura_shim import ShimBranch
 
 
 class ShimCenterPart:
@@ -147,7 +19,7 @@ class ShimCenterPart:
         beam_count: int,
         panel_gap: 1.2,
         beam_gap: 2.2,
-        activated_branch=[True for _ in range(6)],
+        activated_branch=[True for _ in range(8)],
         beam_length=6.33,
         beam_width=4.33,
         drawing=dxf.drawing("yoshimora_shim.dxf"),
@@ -170,9 +42,11 @@ class ShimCenterPart:
         self.angles = [
             0,
             self.angle,
+            90,
             180 - self.angle,
             180,
             180 + self.angle,
+            -90,
             -self.angle,
         ]
         self.width = self.beam_width * 1 / self.ratio
@@ -210,18 +84,19 @@ class ShimCenterPart:
         return branch_positions
 
     def _get_branch_length(self, idx: int) -> float:
-        """Compute the length of the branch at the given index
-
-        Args:
-            idx (int): index of the branch
+        """Compute the length of the horizontal branch of the building block
 
         Returns:
-            float: length of the branch
+            float: length of the horizontal branch
         """
-        if idx == 0 or idx == 3:
+        if idx == 0 or idx == 4:
             return (
-                2 * math.cos(math.radians(self.angle)) * (self.length + 2 * self.radius)
-            ) - 2 * self.radius
+                math.cos(math.radians(self.angle)) * (self.length + 2 * self.radius)
+            ) - self.radius
+        elif idx == 2 or idx == 6:
+            return (
+                math.sin(math.radians(self.angle)) * (self.length + 2 * self.radius)
+            ) - self.radius
         else:
             return self.length
 
@@ -359,7 +234,7 @@ class BuildingBlockShimYoshimora:
         beam_count: int,
         panel_gap: 1.2,
         beam_gap: 2.2,
-        activated_branch=[True for _ in range(6)],
+        activated_branch=[True for _ in range(8)],
         beam_length=6.33,
         beam_width=4.33,
         drawing=dxf.drawing("yoshimora_shim.dxf"),
@@ -382,9 +257,11 @@ class BuildingBlockShimYoshimora:
         self.angles = [
             0,
             self.angle,
+            90,
             180 - self.angle,
             180,
             180 + self.angle,
+            -90,
             -self.angle,
         ]
         self.width = self.beam_width * 1 / self.ratio
@@ -439,18 +316,19 @@ class BuildingBlockShimYoshimora:
         )
 
     def _get_branch_length(self, idx: int) -> float:
-        """Compute the length of the branch at the given index
-
-        Args:
-            idx (int): index of the branch
+        """Compute the length of the horizontal branch of the building block
 
         Returns:
-            float: length of the branch
+            float: length of the horizontal branch
         """
-        if idx == 0 or idx == 3:
+        if idx == 0 or idx == 4:
             return (
-                2 * math.cos(math.radians(self.angle)) * (self.length + 2 * self.radius)
-            ) - 2 * self.radius
+                math.cos(math.radians(self.angle)) * (self.length + 2 * self.radius)
+            ) - self.radius
+        elif idx == 2 or idx == 6:
+            return (
+                math.sin(math.radians(self.angle)) * (self.length + 2 * self.radius)
+            ) - self.radius
         else:
             return self.length
 
@@ -484,7 +362,7 @@ class BuildingBlockShimYoshimora:
             self.beam_count,
             self.panel_gap,
             self.beam_gap,
-            [True for _ in range(6)],
+            [True for _ in range(8)],
             self.beam_length,
             self.beam_width,
             self.drawing,
@@ -708,12 +586,12 @@ class ShimTesselation:
 if __name__ == "__main__":
     scaling = 1
     pattern_settings = {
-        "size": (7, 7),
+        "size": (3, 3),
         "center": (0, 0),
         "ratio": 0.88,
-        "radius": 2.13 * scaling,
-        "length": 26 * scaling,
-        "angle": 60,
+        "radius": 2.5 * scaling,
+        "length": 35 * scaling,
+        "angle": 45,
         "beam_count": 2,
         "panel_gap": 1.2,
         "beam_gap": 2.33 * scaling,
@@ -723,22 +601,22 @@ if __name__ == "__main__":
         "position": (0, 0),
     }
 
-    shimCenterPart = ShimCenterPart(
-        **pattern_settings, drawing=dxf.drawing("test/shim_center_part.dxf")
-    )
-    shimCenterPart()
+    # shimCenterPart = ShimCenterPart(
+    #     **pattern_settings, drawing=dxf.drawing("test/shim_center_part.dxf")
+    # )
+    # shimCenterPart()
 
-    shimSep = ShimSep(**pattern_settings, drawing=dxf.drawing("test/shim_sep.dxf"))
-    shimSep.drawing.save()
-    shimSep()
+    # shimSep = ShimSep(**pattern_settings, drawing=dxf.drawing("test/shim_sep.dxf"))
+    # shimSep.drawing.save()
+    # shimSep()
 
     shimBuildingBlock = BuildingBlockShimYoshimora(
-        **pattern_settings, drawing=dxf.drawing("test/shim_building_block.dxf")
+        **pattern_settings, drawing=dxf.drawing("test/shim_building_updated_block.dxf")
     )
     shimBuildingBlock()
 
     shimTesselation = ShimTesselation(
         **pattern_settings,
-        drawing=dxf.drawing("out/shim_tesselation.dxf"),
+        drawing=dxf.drawing("test/shim_tesselation_updated.dxf"),
     )
     shimTesselation()

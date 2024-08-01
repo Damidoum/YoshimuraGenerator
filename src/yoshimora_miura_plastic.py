@@ -519,12 +519,12 @@ class YoshimoraTesselation:
 if __name__ == "__main__":
     scaling = 1
     pattern_settings = {
-        "size": (3, 3),
+        "size": (4, 4),
         "center": (0, 0),
         "ratio": 0.88,
-        "radius": 2.5 * scaling,
-        "length": 27 * scaling,
-        "angle": 40,
+        "radius": 2.13 * scaling,
+        "length": 26 * scaling,
+        "angle": 60,
         "beam_count": 2,
         "panel_gap": 1.2,
         "beam_gap": 2.33 * scaling,

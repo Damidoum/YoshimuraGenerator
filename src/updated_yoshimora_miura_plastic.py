@@ -1,12 +1,14 @@
-from typing import Any
-from dxfwrite import DXFEngine as dxf
 import math
+from typing import Any
+
+from dxfwrite import DXFEngine as dxf
+
 from utils import (
     end_point_of_line,
     normalize_vector,
     vector_difference,
-    vector_sum,
     vector_multiply,
+    vector_sum,
 )
 from yoshimora_miura_plastic import Branch, BranchTape
 
@@ -319,14 +321,14 @@ class YoshimoraUpdatedTesselation:
 
 
 if __name__ == "__main__":
-    scaling = 1.5
+    scaling = 1
     pattern_settings = {
-        "size": (7, 7),
+        "size": (4, 4),
         "center": (0, 0),
         "ratio": 0.88,
         "radius": 2.5 * scaling,
-        "length": 27 * scaling,
-        "angle": 40,
+        "length": 26.86 * scaling,
+        "angle": 45,
         "beam_count": 2,
         "panel_gap": 1.2,
         "beam_gap": 2.33 * scaling,
@@ -347,3 +349,10 @@ if __name__ == "__main__":
         drawing=dxf.drawing("test/yoshimura_updated_tesselation_tape.dxf"),
     )
     yoshimora_tesselation()
+
+    yoshimora_tesselation2 = YoshimoraUpdatedTesselation(
+        **pattern_settings,
+        tape=False,
+        drawing=dxf.drawing("test/yoshimura_updated_tesselation.dxf"),
+    )
+    yoshimora_tesselation2()
